@@ -161,7 +161,6 @@ export function trimStart(str: string, chars: string = EMPTY): string {
     }
     let start = 0;
     if (chars.length === 1) {
-       
         const c = chars.charCodeAt(0);
         for (let i = 0; i < str.length; i++) {
             if (str.charCodeAt(i) === c) {
