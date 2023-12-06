@@ -1,5 +1,4 @@
 import { Exception, NotFoundOnPathException } from "../exceptions/mod.ts";
-import { NEW_LINE } from "../os/constants.ts";
 import {
     ExecArgs,
     IChildProcess,
