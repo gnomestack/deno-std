@@ -183,7 +183,8 @@ class PsOutput implements IPsOutput {
         }
 
         if (this.stdout.length) {
-            return this.#stdoutLines = this.stdoutText.split(this.split || NEW_LINE);
+            this.#stdoutLines = this.stdoutText.split(/\r\n|\n/);
+            return this.#stdoutLines;
         }
 
         this.#stdoutLines = [];
@@ -196,7 +197,7 @@ class PsOutput implements IPsOutput {
         }
 
         if (this.stderr.length) {
-            return this.#stderrLines = this.stderrText.split(this.split || NEW_LINE);
+            return this.#stderrLines = this.stderrText.split(/\r\n|\n/);
         }
 
         this.#stderrLines = [];

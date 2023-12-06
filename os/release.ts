@@ -23,6 +23,30 @@ class OsRelease {
     variant?: string;
     variantId?: string;
     map: Record<string, string> = {};
+
+    get isWindows() {
+        return this.id === "windows";
+    }
+
+    get isWindowsServer() {
+        return this.isWindows && this.variantId === "server";
+    }
+
+    get isUbuntu() {
+        return this.id === "ubuntu";
+    }
+
+    get isDebian() {
+        return this.id === "debian";
+    }
+
+    get isDebianLike() {
+        return this.idLike === "debian" || this.id === "debian";
+    }
+
+    get isDarwin() {
+        return this.id === "macos";
+    }
 }
 
 let release: OsRelease | undefined;
