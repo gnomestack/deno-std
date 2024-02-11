@@ -17,7 +17,11 @@ if (isTfBuild) {
         return this;
     };
 
-    ansiWriter.exportVariable = function (name: string, value: string, secret?: boolean): IAnsiWriter {
+    ansiWriter.exportVariable = function (
+        name: string,
+        value: string,
+        secret?: boolean,
+    ): IAnsiWriter {
         set(name, value, secret ?? false);
         if (secret) {
             this.writeLine(`##[setVariable variable=${name};isSecret=true]${value}`);
@@ -56,7 +60,10 @@ if (isTfBuild) {
         return this;
     };
 
-    ansiWriter.debug = function (message: string, ...args: unknown[]): IAnsiWriter {
+    ansiWriter.debug = function (
+        message: string,
+        ...args: unknown[]
+    ): IAnsiWriter {
         if (this.level < AnsiLogLevel.Debug) {
             return this;
         }
@@ -68,7 +75,10 @@ if (isTfBuild) {
         return this;
     };
 
-    ansiWriter.command = function (command: string, args?: unknown[]): IAnsiWriter {
+    ansiWriter.command = function (
+        command: string,
+        args?: unknown[],
+    ): IAnsiWriter {
         if (this.level < AnsiLogLevel.Warning) {
             return this;
         }
@@ -89,7 +99,11 @@ if (isGithub) {
         return this;
     };
 
-    ansiWriter.exportVariable = function (name: string, value: string, secret?: boolean): IAnsiWriter {
+    ansiWriter.exportVariable = function (
+        name: string,
+        value: string,
+        secret?: boolean,
+    ): IAnsiWriter {
         set(name, value, secret ?? false);
         if (secret) {
             this.writeLine(`::add-mask::${value}`);
@@ -99,7 +113,9 @@ if (isGithub) {
         const file = get("GITHUB_ENV");
         if (file) {
             if (value.includes("\n")) {
-                writeTextFileSync(file, `${name}<<EOF\n${value}\nEOF\n`, { append: true });
+                writeTextFileSync(file, `${name}<<EOF\n${value}\nEOF\n`, {
+                    append: true,
+                });
             } else {
                 writeTextFileSync(file, `${name}=\"${value}\"\n`, { append: true });
             }

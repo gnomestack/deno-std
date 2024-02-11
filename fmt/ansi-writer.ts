@@ -25,7 +25,7 @@ export function handleArguments(args: IArguments) {
         case 0:
             return { msg, stack };
         case 1: {
-            if (args[0] instanceof Exception) {
+            if (args[0] instanceof SystemError) {
                 const e = args[0] as Error;
                 msg = e.message;
                 stack = handleStack(e.stack);
@@ -37,7 +37,7 @@ export function handleArguments(args: IArguments) {
         }
 
         case 2: {
-            if (args[0] instanceof Exception) {
+            if (args[0] instanceof SystemError) {
                 const e = args[0] as Error;
                 const message = args[1] as string;
                 msg = message;
@@ -51,7 +51,7 @@ export function handleArguments(args: IArguments) {
         }
 
         default: {
-            if (args[0] instanceof Exception) {
+            if (args[0] instanceof SystemError) {
                 const e = args[0] as Error;
                 const message = args[1] as string;
                 const splat = Array.from(args).slice(2);
@@ -153,7 +153,9 @@ export class AnsiWriter implements IAnsiWriter {
             this.#interactive = false;
         }
 
-        if (args.includes("-NonInteractive") || args.includes("--non-interactive")) {
+        if (
+            args.includes("-NonInteractive") || args.includes("--non-interactive")
+        ) {
             this.#interactive = false;
         }
 

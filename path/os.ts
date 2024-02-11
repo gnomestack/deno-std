@@ -1,4 +1,4 @@
-import { Exception } from "../exceptions/mod.ts";
+import { OptionError } from "../errors/mod.ts";
 import { IS_WINDOWS } from "../os/constants.ts";
 import { get } from "../os/env.ts";
 import { homeDir } from "../os/os.ts";
@@ -36,7 +36,7 @@ export function homeConfigDir(ignoreSudo = true, force = false) {
         }
 
         if (!home) {
-            throw new Exception("Could not find home directory");
+            throw new OptionError("Could not find home directory");
         }
 
         configDir = join(home, "AppData", "Roaming");
@@ -53,7 +53,7 @@ export function homeConfigDir(ignoreSudo = true, force = false) {
         }
 
         if (!home) {
-            throw new Exception("Could not find home directory");
+            throw new OptionError("Could not find home directory");
         }
 
         configDir = join(home, ".config");

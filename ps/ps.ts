@@ -1,4 +1,5 @@
-import { Exception, NotFoundOnPathException } from "../exceptions/mod.ts";
+import { OptionError, NotFoundOnPathError, ArgumentError, ProcessError } from "../errors/mod.ts";
+import { readLines } from "../io/read-lines.ts";
 import {
     ExecArgs,
     IChildProcess,
@@ -8,267 +9,377 @@ import {
     IPsCommand,
     IPsOutput,
     IPsOutputArgs,
+    IPsPostHook,
+    IPsPreHook,
     IPsStartInfo,
     ISplatOptions,
     Signal,
-} from "./interfaces.ts";
-
+    StdInput,
+    Stdio,
+} from "./types.ts";
 import { findExe, findExeSync } from "./registry.ts";
 import { splat } from "./splat.ts";
 import { splitArguments } from "./split_arguments.ts";
-
+import { PsOutput } from "./ps-output.ts";
+import { createPipeFactory } from "./pipe.ts";
+import { ChildProcess } from "./child-process.ts";
 export type { IChildProcess, IPsStartInfo, Signal };
-
 export { PsOutput };
-export interface IPsPreHook {
-    (si: IPsStartInfo): void;
-}
 
-export interface IPsPostHook {
-    (si: IPsStartInfo, result: PsOutput): void;
-}
 
 export const preCallHooks: IPsPreHook[] = [];
-
 export const postCallHooks: IPsPostHook[] = [];
 
-export class Pipe implements IPipe {
-    #promise: Promise<IChildProcess>;
+export type OutputKind = "text" | "buffer" | "lines" | 'default' | 'json';
 
-    constructor(
-        private readonly process: IChildProcess,
-    ) {
-        this.#promise = Promise.resolve(process);
-    }
+export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
+    #startInfo: IPsStartInfo;
+    #child?: IChildProcess;
+    #kind: OutputKind = 'default';
+    #validate?: (code: number) => boolean;
 
-    pipe(name: string, args?: ExecArgs, options?: IExecOptions): IPipe;
-    pipe(next: IChildProcess | IPsCommand | IPsOutput): IPipe;
-    pipe(): IPipe {
-        if (arguments.length === 0) {
-            throw new Exception("Invalid arguments");
+    constructor(startInfo?: IPsStartInfo) {
+        this.#startInfo = startInfo ??
+            { file: "", stdout: "piped", stderr: "piped" };
+        if (!this.#startInfo.stdout) {
+            this.#startInfo.stdout = "piped";
         }
 
+        if (!this.#startInfo.stderr) {
+            this.#startInfo.stderr = "piped";
+        }
+    }
+
+    then<TResult1 = IPsOutput, TResult2 = never>(
+        onfulfilled?: ((value: IPsOutput) => TResult1 | PromiseLike<TResult1>) | null | undefined, 
+        onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined): PromiseLike<TResult1 | TResult2> {
+        return this.output().then(onfulfilled, onrejected)
+    }
+
+    /**
+     * Sets the filepath to the executable to run.
+     * @param file Sets the file to run.
+     * @returns self
+     */
+    file(file: string | URL) {
+        this.#startInfo.file = file;
+        return this;
+    }
+
+    /**
+     * Sets the environment variables for the executable.
+     * @param env The environment variables to set for the executable.
+     * @returns self.
+     */
+    env(env: Record<string, string>) {
+        if (this.#startInfo.env == undefined) {
+            this.#startInfo.env = env;
+            return this;
+        }
+
+        for (const key in env) {
+            this.#startInfo.env[key] = env[key];
+        }
+
+        return this;
+    }
+
+    /**
+     * Sets the current working directory for the executable.
+     * @param cwd The current working directory for the executable.
+     * @returns self.
+     */
+    cwd(cwd: string  | undefined) {
+        this.#startInfo.cwd = cwd;
+        return this;
+    }
+
+    /**
+     * Sets the arguments to pass to the executable.
+     * @param args The args to pass to the executable. Can be `string[]`, `string`, or `Record<string, unknown>`.
+     * @returns self
+     */
+    args(args?: ExecArgs) {
+        this.#startInfo.args = normalizeExecArgs(args);
+        return this;
+    }
+
+    /**
+     * Sets data to be written to the standard input stream.
+     * @param input The input to copy to the standard input stream.
+     * @returns self.
+     */
+    input(input?: StdInput) {
+        this.#startInfo.input = input;
+        this.#startInfo.stdin = "piped";
+        return this;
+    }
+
+    /**
+     * Sets the Stdio modifier for standard input stream. e.g. 'inherit', 'piped', or 'null'.
+     * @param stdin The Stdio type to use. 
+     * @returns self
+     */
+    stdin(stdin: Stdio) {
+        this.#startInfo.stdin = stdin;
+        return this;
+    }
+
+    /**
+     * Sets the Stdio modifier for standard output stream. e.g. 'inherit', 'piped', or 'null'.
+     * @param stdout The Stdio type to use.
+     * @returns self
+     */
+    stdout(stdout: Stdio) {
+        this.#startInfo.stdout = stdout;
+        return this;
+    }
+
+    /**
+     * Sets the Stdio modifier for standard error stream. e.g. 'inherit', 'piped', or 'null'.
+     * @param stdout The Stdio type to use.
+     * @returns self
+     */
+    stderr(stderr: Stdio) {
+        this.#startInfo.stderr = stderr;
+        return this;
+    }
+
+    /**
+     * Pipes the output of the current process to another process. This is similar
+     * to the `|` operator in Unix or the `|` operator in PowerShell. 
+     * @param name The filename of the executable to run.
+     * @param args The arguments to pass to the executable. Can be `string[]`, `string`, or `Record<string, unknown>`.
+     * @param options The options to use when running the executable such as setting the cwd or env variables.
+     * @example 
+     * ```ts
+     *  const result = await ps("echo", "my test")
+     *      .pipe("grep", "test")
+     *      .pipe("cat")
+     *      .output();
+     * 
+     * ```
+     */
+    pipe(name: string, args?: ExecArgs, options?: Omit<IExecOptions, 'stdin' | 'stdout' | 'stderr'>): IPipe;
+    /**
+     * Pipes the output of the current process to another process. This is similar
+     * to the `|` operator in Unix or the `|` operator in PowerShell.
+     * @param name 
+     * @param args 
+     * @param options 
+     * @example 
+     * ```ts
+     *  const result = await ps("echo", "my test")
+     *      .pipe(ps("grep", "test"))
+     *      .pipe(ps("cat"))
+     *      .output();
+     * ```
+     */
+    pipe(next: IChildProcess | Ps): IPipe;
+    pipe(): IPipe {
+        this.#startInfo.stdout = "piped";
+        this.#startInfo.stderr = "inherit";
+
+        if (arguments.length === 0) {
+            throw new OptionError("Invalid arguments");
+        }
+
+        let next: IChildProcess | Ps;
         if (typeof arguments[0] === "string") {
             const args = arguments[1] as ExecArgs;
             const options = arguments[2] as IExecOptions;
-            const next = ps(arguments[0], args, options);
-            return this.pipe(next);
+            next = ps(arguments[0], args, options);
+            next.stdout("piped");
+        } else {
+            next = arguments[0];
         }
 
-        const next = arguments[0];
+        return pipeFactory.create(this.spawn()).pipe(next);
+    }
 
-        this.#promise = this.#promise.then(async (process) => {
-            let child = next as IChildProcess;
-            if (typeof next === "object" && "spawn" in next) {
-                if (next instanceof Ps) {
-                    next.withStdin("piped");
-                }
-                child = next.spawn();
+    /**
+     * Executes and returns the standard output stream as a string. The standard error stream is ignored.
+     * If input is set, then the standard input stream is piped.
+     * 
+     * @description
+     * This is a convenience method to handle passing in stdout to `Response` and calling `text()`.
+     * 
+     * @returns the standard output stream as a string.
+     */
+    text() {
+        this.#startInfo.stdout = "piped";
+        this.#startInfo.stderr = 'null';
+        if (this.#startInfo.input !== undefined)
+            this.#startInfo.stdin = "piped";
+
+        const spawn = this.spawn();
+        return spawn.text();
+    }
+
+    /**
+     * Executes and returns the standard output stream as a JSON object. The standard error stream is ignored.
+     * If input is set, then the standard input stream is piped.
+     * 
+     * @description
+     * This is a convenience method to handle passing in stdout to `Response` and calling `json()`.
+     * 
+     * @returns json as `any`.
+     */
+    json() {
+        this.#startInfo.stdout = "piped";
+        this.#startInfo.stderr = 'null';
+        if (this.#startInfo.input !== undefined)
+            this.#startInfo.stdin = "piped";
+
+        const spawn = this.spawn();
+        return spawn.json();
+    }
+
+    /**
+     * Executes and returns the standard output stream as a `Uint8Array`. The standard error stream is ignored.
+     * If input is set, then the standard input stream is piped.
+     * 
+     * @description
+     * This is a convenience method to handle passing in stdout to `Response` and calling `blob()`.
+     * 
+     * @returns a blob object.
+     */
+    blob() {
+        this.#startInfo.stdout = "piped";
+        this.#startInfo.stderr = 'null';
+        if (this.#startInfo.input !== undefined)
+            this.#startInfo.stdin = "piped";
+
+        const spawn = this.spawn();
+        return spawn.blob();
+    }
+
+    /**
+     * Executes and returns the standard output stream as a `ArrayBuffer`. The standard error stream is ignored.
+     * If input is set, then the standard input stream is piped.
+     * 
+     * @description
+     * This is a convenience method to handle passing in stdout to `Response` and calling `arrayBuffer()`.
+     * 
+     * @returns an `ArrayBuffer`.
+     */
+    arrayBuffer() {
+        this.#startInfo.stdout = "piped";
+        this.#startInfo.stderr = 'null';
+        if (this.#startInfo.input !== undefined)
+            this.#startInfo.stdin = "piped";
+
+        const spawn = this.spawn();
+        return spawn.arrayBuffer();
+    }
+
+     /**
+     * Executes and returns the standard output stream as a `AsyncIterator<string>`. The standard error stream is ignored.
+     * If input is set, then the standard input stream is piped.
+     * 
+     * @description
+     * This is a convenience method that calls `tryReadLines` on the standard output stream and handles cleanup of the stdin
+     * and stderr streams.
+     * 
+     * @returns an `ArrayBuffer`.
+     * @example 
+     * ```ts
+     * 
+     * for await (const line of ps("echo", "hello world").lines()) {
+     *    console.log(line);
+     * }
+     */
+    lines() {
+        this.#startInfo.stdout = "piped";
+        this.#startInfo.stderr = 'null';
+        if (this.#startInfo.input !== undefined)
+            this.#startInfo.stdin = "piped";
+
+        const spawn = this.spawn();
+        return spawn.lines();
+    }
+
+    /**
+     * Executes and returns the standard output and error streams as a `Uint8Array` using the `IPsOutput` object which
+     * includes the code and signal of the process. The method automatically sets the `stdout` and `stderr` to `piped`.
+     * If input is set, then the standard input stream is piped.
+     * 
+     * @returns an `IPsOutput` object.
+     * @see IPsOutput
+     * @see PsOutput
+     * @example 
+     * ```ts
+     * const result = await ps("echo", "hello world").quiet();
+     * console.log(result.code);
+     * console.log(result.stdoutText);
+     * ```
+     */
+    quiet() {
+        this.#startInfo.stdout = 'piped'
+        this.#startInfo.stderr = 'piped';
+        if (this.#startInfo.input !== undefined)
+            this.#startInfo.stdin = "piped";
+
+        return this.output();
+    }
+
+    spawn() {
+        if (this.#child) {
+            return this.#child;
+        }
+
+        if (preCallHooks.length > 0) {
+            preCallHooks.forEach((hook) => {
+                hook(this.#startInfo);
+            });
+        }
+
+        const start = new Date();
+        const cmd = new Deno.Command(this.#startInfo.file, this.#startInfo);
+        return new ChildProcess(cmd.spawn(), this.#startInfo, pipeFactory, start);
+    }
+
+    async output() {
+        if (preCallHooks.length > 0) {
+            preCallHooks.forEach((hook) => {
+                hook(this.#startInfo);
+            });
+        }
+
+        if (!this.#startInfo.input) {
+            console.log("no input");
+            const start = new Date();
+            const cmd2 = new Deno.Command(this.#startInfo.file, this.#startInfo);
+            const result = await cmd2.output();
+            const output = new PsOutput({
+                file: this.#startInfo.file,
+                args: this.#startInfo.args,
+                stdout: this.#startInfo.stdout === "piped" ? result.stdout : new Uint8Array(),
+                stderr: this.#startInfo.stderr === "piped" ? result.stderr : new Uint8Array(),
+                code: result.code,
+                signal: result.signal as Signal,
+                start: start,
+            });
+
+            if (postCallHooks.length > 0) {
+                postCallHooks.forEach((hook) => {
+                    hook(this.#startInfo, output);
+                });
             }
 
-            try {
-                await process.stdout.pipeTo(child.stdin);
-                await process.stdin.abort();
-                await process.stderr.cancel();
-                await process.status;
-            } catch (ex) {
-                throw new Exception(`Pipe failed for ${process.file}: ${ex.message} ${ex.stack}`);
-            }
-
-            return child;
-        });
-        return this;
-    }
-
-    async output(): Promise<IPsOutput> {
-        const process = await this.#promise.finally();
-        return process.output();
-    }
-}
-
-class PsOutput implements IPsOutput {
-    #stdout: Uint8Array;
-    #stderr: Uint8Array;
-    #code: number;
-    #signal?: Signal;
-    #stdoutString?: string;
-    #stderrString?: string;
-    #stdoutLines?: string[];
-    #stderrLines?: string[];
-    #split?: string;
-    #file: string | URL;
-    #args?: string[];
-    #start: Date;
-    #end: Date;
-
-    constructor(data: IPsOutputArgs) {
-        this.#end = new Date();
-        this.#start = data.start;
-        this.#file = data.file;
-        this.#stderr = data.stderr ?? new Uint8Array();
-        this.#stdout = data.stdout ?? new Uint8Array();
-        this.#args = data.args;
-        this.#code = data.code;
-        this.#signal = data.signal;
-    }
-
-    set split(value: string) {
-        this.split = value;
-    }
-
-    get file() {
-        return this.#file;
-    }
-
-    get args() {
-        return this.#args;
-    }
-
-    get start() {
-        return this.#start;
-    }
-
-    get end() {
-        return this.#end;
-    }
-
-    get code() {
-        return this.#code;
-    }
-
-    get signal() {
-        return this.#signal as Signal;
-    }
-
-    get stdout() {
-        return this.#stdout;
-    }
-
-    get stdoutText() {
-        if (this.#stdoutString) {
-            return this.#stdoutString;
+            return output;
         }
 
-        if (this.#stdout.length) {
-            this.#stdoutString = new TextDecoder().decode(this.#stdout);
-        } else {
-            this.#stdoutString = "";
-        }
+        const input = this.#startInfo.input;
+        this.#startInfo.stdin = "piped";
+        const cmd = new Deno.Command(this.#startInfo.file, this.#startInfo);
+        const start = new Date();
+        const child = cmd.spawn();
+        if (this.#startInfo.input && !child.stdin.locked) {
 
-        return this.#stdoutString;
-    }
-
-    get stderr() {
-        return this.#stderr;
-    }
-
-    get stderrText() {
-        if (this.#stderrString) {
-            return this.#stderrString;
-        }
-
-        if (this.#stderr.length) {
-            this.#stderrString = new TextDecoder().decode(this.#stderr);
-        } else {
-            this.#stderrString = "";
-        }
-
-        return this.#stderrString;
-    }
-
-    get stdoutLines() {
-        if (this.#stdoutLines) {
-            return this.#stdoutLines;
-        }
-
-        if (this.stdout.length) {
-            this.#stdoutLines = this.stdoutText.split(/\r\n|\n/);
-            return this.#stdoutLines;
-        }
-
-        this.#stdoutLines = [];
-        return this.#stdoutLines;
-    }
-
-    get stderrLines() {
-        if (this.#stderrLines) {
-            return this.#stderrLines;
-        }
-
-        if (this.stderr.length) {
-            return this.#stderrLines = this.stderrText.split(/\r\n|\n/);
-        }
-
-        this.#stderrLines = [];
-        return this.#stderrLines;
-    }
-
-    success(validate?: (code: number) => boolean) {
-        if (!validate) {
-            return this.code === 0;
-        }
-
-        return validate(this.code);
-    }
-
-    throwOrContinue(validate?: (code: number) => boolean): IPsOutput {
-        if ((validate && !validate(this.code)) || this.code !== 0) {
-            throw new Exception(`Process failed with code ${this.code} and signal ${this.signal}`);
-        }
-
-        return this;
-    }
-
-    toString() {
-        return this.stdoutText;
-    }
-}
-
-class ChildProcess implements IChildProcess {
-    #piped: boolean;
-    #start: Date;
-    constructor(private readonly process: Deno.ChildProcess, private readonly si: IPsStartInfo, start?: Date) {
-        this.#piped = false;
-        this.#start = start ?? new Date();
-    }
-
-    get pid() {
-        return this.process.pid;
-    }
-
-    get file() {
-        return this.si.file;
-    }
-
-    get args() {
-        return this.si.args;
-    }
-
-    get status() {
-        return this.process.status;
-    }
-
-    get stdin() {
-        return this.process.stdin;
-    }
-
-    get stdout() {
-        return this.process.stdout;
-    }
-
-    get stderr() {
-        return this.process.stderr;
-    }
-
-    pipe(next: IChildProcess | IPsCommand): IPipe {
-        this.#piped = true;
-        return new Pipe(this).pipe(next);
-    }
-
-    async output(): Promise<IPsOutput> {
-        const child = this.process;
-        if (!this.#piped && this.si.input && !child.stdin.locked) {
-            const input = this.si.input;
+            // the following must be done in order:
+            // close the writer, release the lock, close the stream.
+            // if you call output, then don't call stream.close
             if (input instanceof PsOutput) {
                 const writer = child.stdin.getWriter();
                 await writer.write(input.stdout);
@@ -295,235 +406,44 @@ class ChildProcess implements IChildProcess {
                     await writer.write(value);
                 }
                 await writer.close();
+                writer.releaseLock();
                 await reader.closed;
                 reader.releaseLock();
-                writer.releaseLock();
             }
 
             if (typeof input === "string") {
+                console.log("input:", "string");
                 const writer = child.stdin.getWriter();
                 await writer.write(new TextEncoder().encode(input));
+
+        
                 await writer.close();
                 writer.releaseLock();
             }
         }
-
-        const result = await this.process.output();
-        const output = new PsOutput({
-            file: this.si.file,
-            args: this.si.args,
-            stdout: this.si.stdout === "piped" ? result.stdout : new Uint8Array(),
-            stderr: this.si.stderr === "piped" ? result.stderr : new Uint8Array(),
-            code: result.code,
-            signal: result.signal as Signal,
-            start: this.#start,
-        });
-
-        return output;
-    }
-
-    kill(signal?: Signal) {
-        this.process.kill(signal);
-    }
-
-    ref() {
-        this.process.ref();
-    }
-
-    unref() {
-        this.process.unref();
-    }
-}
-
-export class Ps implements IPsCommand {
-    #startInfo: IPsStartInfo;
-    #child?: IChildProcess;
-
-    constructor(startInfo?: IPsStartInfo) {
-        this.#startInfo = startInfo ?? { file: "", stdout: "piped", stderr: "piped" };
-        if (!this.#startInfo.stdout) {
-            this.#startInfo.stdout = "piped";
-        }
-
-        if (!this.#startInfo.stderr) {
-            this.#startInfo.stderr = "piped";
-        }
-    }
-
-    withFile(file: string | URL) {
-        this.#startInfo.file = file;
-        return this;
-    }
-
-    addEnv(key: string, value: string) {
-        if (this.#startInfo.env == undefined) {
-            this.#startInfo.env = {};
-        }
-        this.#startInfo.env[key] = value;
-        return this;
-    }
-
-    withArgs(args: string[]) {
-        this.#startInfo.args = args;
-        return this;
-    }
-
-    withEnv(env: { [key: string]: string }) {
-        if (this.#startInfo.env == undefined) {
-            this.#startInfo.env = env;
-            return this;
-        }
-
-        for (const key in env) {
-            this.#startInfo.env[key] = env[key];
-        }
-
-        return this;
-    }
-
-    withInput(input: Uint8Array | string | ReadableStream | PsOutput) {
-        this.#startInfo.input = input;
-        this.#startInfo.stdin = "piped";
-        return this;
-    }
-
-    withStdin(stdin: "inherit" | "piped" | "null") {
-        this.#startInfo.stdin = stdin;
-        return this;
-    }
-
-    withStdout(stdout: "inherit" | "piped" | "null") {
-        this.#startInfo.stdout = stdout;
-        return this;
-    }
-
-    withStderr(stderr: "inherit" | "piped" | "null") {
-        this.#startInfo.stderr = stderr;
-        return this;
-    }
-
-    pipe(name: string, args?: ExecArgs, options?: IExecOptions): IPipe;
-    pipe(next: IChildProcess | Ps): IPipe;
-    pipe(): IPipe {
-        this.#startInfo.stdout = "piped";
-        this.#startInfo.stderr = "piped";
-
-        if (arguments.length === 0) {
-            throw new Exception("Invalid arguments");
-        }
-
-        if (typeof arguments[0] === "string") {
-            const args = arguments[1] as ExecArgs;
-            const options = arguments[2] as IExecOptions;
-            const next = ps(arguments[0], args, options);
-            return this.pipe(next);
-        }
-
-        return new Pipe(this.spawn()).pipe(arguments[0]);
-    }
-
-    spawn() {
-        if (this.#child) {
-            return this.#child;
-        }
-
-        if (preCallHooks.length > 0) {
-            preCallHooks.forEach((hook) => {
-                hook(this.#startInfo);
-            });
-        }
-
-        const start = new Date();
-        const cmd = new Deno.Command(this.#startInfo.file, this.#startInfo);
-        return new ChildProcess(cmd.spawn(), this.#startInfo, start);
-    }
-
-    async output() {
-        if (preCallHooks.length > 0) {
-            preCallHooks.forEach((hook) => {
-                hook(this.#startInfo);
-            });
-        }
-
-        if (!this.#startInfo.input) {
-            const start = new Date();
-            const cmd2 = new Deno.Command(this.#startInfo.file, this.#startInfo);
-            const result = await cmd2.output();
-            const output = new PsOutput({
-                file: this.#startInfo.file,
-                args: this.#startInfo.args,
-                stdout: this.#startInfo.stdout === "piped" ? result.stdout : new Uint8Array(),
-                stderr: this.#startInfo.stderr === "piped" ? result.stderr : new Uint8Array(),
-                code: result.code,
-                signal: result.signal as Signal,
-                start: start,
-            });
-
-            if (postCallHooks.length > 0) {
-                postCallHooks.forEach((hook) => {
-                    hook(this.#startInfo, output);
-                });
-            }
-
-            return output;
-        }
-
-        const input = this.#startInfo.input;
-        this.#startInfo.stdin = "piped";
-        const cmd = new Deno.Command(this.#startInfo.file, this.#startInfo);
-
-        const child = cmd.spawn();
-        if (input instanceof PsOutput) {
-            const writer = child.stdin.getWriter();
-            await writer.write(input.stdout);
-            await writer.close();
-        }
-
-        if (input instanceof Uint8Array) {
-            const writer = child.stdin.getWriter();
-            await writer.write(input);
-            await writer.close();
-        }
-
-        if (input instanceof ReadableStream) {
-            const writer = child.stdin.getWriter();
-            const reader = input.getReader();
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) {
-                    break;
-                }
-
-                await writer.write(value);
-            }
-            await writer.close();
-        }
-
-        if (typeof input === "string") {
-            const writer = child.stdin.getWriter();
-            await writer.write(new TextEncoder().encode(input));
-            await writer.close();
-        }
-
-        const result = await child.output();
-        const start = new Date();
-        const output = new PsOutput({
+    
+  
+        const output = await child.output();
+        await child.status;
+        const psOutput = new PsOutput({
             file: this.#startInfo.file,
             args: this.#startInfo.args,
-            stdout: this.#startInfo.stdout === "piped" ? result.stdout : new Uint8Array(),
-            stderr: this.#startInfo.stderr === "piped" ? result.stderr : new Uint8Array(),
-            code: result.code,
-            signal: result.signal as Signal,
+            stdout: this.#startInfo.stdout === "piped" ? output.stdout : new Uint8Array(),
+            stderr: this.#startInfo.stderr === "piped" ? output.stderr : new Uint8Array(),
+            code: output.code,
+            signal: output.signal as Signal,
             start: start,
+            end: new Date(),
         });
+        
 
         if (postCallHooks.length > 0) {
             postCallHooks.forEach((hook) => {
-                hook(this.#startInfo, output);
+                hook(this.#startInfo, psOutput);
             });
         }
 
-        return output;
+        return psOutput;
     }
 
     outputSync() {
@@ -556,7 +476,10 @@ export class Ps implements IPsCommand {
     }
 }
 
-function convertArgs(args?: ExecArgs, splatOptions?: ISplatOptions): string[] | undefined {
+export function normalizeExecArgs(
+    args?: ExecArgs,
+    splatOptions?: ISplatOptions,
+): string[] | undefined {
     if (!args) {
         return undefined;
     }
@@ -572,13 +495,17 @@ function convertArgs(args?: ExecArgs, splatOptions?: ISplatOptions): string[] | 
     return splat(args, splatOptions);
 }
 
-export function ps(name: string, args?: ExecArgs, options?: IExecOptions) {
-    const path = findExeSync(name);
-    if (!path) {
-        throw new NotFoundOnPathException(name);
+export function ps(name: string | URL, args?: ExecArgs, options?: IExecOptions) {
+    if (name instanceof URL) {
+        name = name.toString();
     }
 
-    const a = convertArgs(args, options?.splat);
+    const path = findExeSync(name);
+    if (!path) {
+        throw new NotFoundOnPathError(name);
+    }
+
+    const a = normalizeExecArgs(args, options?.splat);
 
     const si: IPsStartInfo = {
         ...options,
@@ -587,90 +514,18 @@ export function ps(name: string, args?: ExecArgs, options?: IExecOptions) {
     };
 
     if (si.stdout === undefined) {
-        si.stdout = "piped";
+        si.stdout = 'inherit';
     }
 
     if (si.stderr === undefined) {
-        si.stderr = "piped";
+        si.stderr = 'inherit';
     }
 
     if (options?.input || si.stdin === undefined) {
-        si.stdin = "piped";
+        si.stdin = 'inherit';
     }
 
     return new Ps(si);
 }
 
-export async function exec(name: string, args?: ExecArgs, options?: IExecOptions) {
-    const path = await findExe(name);
-    if (!path) {
-        throw new NotFoundOnPathException(name);
-    }
-
-    const a = convertArgs(args, options?.splat);
-
-    const si: IPsStartInfo = {
-        ...options,
-        file: path,
-        args: a,
-    };
-
-    if (si.stdout === undefined) {
-        si.stdout = "inherit";
-    }
-
-    if (si.stderr === undefined) {
-        si.stderr = "inherit";
-    }
-
-    if (options?.input) {
-        si.stdin = "piped";
-    }
-
-    return new Ps(si).output();
-}
-
-export function execSync(name: string, args?: ExecArgs, options?: IExecSyncOptions) {
-    const path = findExeSync(name);
-    if (!path) {
-        throw new NotFoundOnPathException(name);
-    }
-
-    const a = convertArgs(args, options?.splat);
-
-    const si: IPsStartInfo = {
-        ...options,
-        file: path,
-        args: a,
-    };
-
-    if (si.stdout === undefined) {
-        si.stdout = "inherit";
-    }
-
-    if (si.stderr === undefined) {
-        si.stderr = "inherit";
-    }
-
-    return new Ps(si).outputSync();
-}
-
-export function capture(name: string, args?: ExecArgs, options?: Omit<IExecOptions, "stdout" | "stderr">) {
-    const o: IExecOptions = {
-        ...options,
-        stdout: "piped",
-        stderr: "piped",
-    };
-
-    return exec(name, args, o);
-}
-
-export function captureSync(name: string, args?: ExecArgs, options?: Omit<IExecSyncOptions, "stdout" | "stderr">) {
-    const o: IExecSyncOptions = {
-        ...options,
-        stdout: "piped",
-        stderr: "piped",
-    };
-
-    return execSync(name, args, o);
-}
+const pipeFactory = createPipeFactory(ps);

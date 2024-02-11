@@ -1,18 +1,18 @@
 import { IError } from "../primitives/error.ts";
 
-function from(e: Error): Exception {
-    if (e instanceof AggregateException) {
-        return AggregateException.from(e);
+function from(e: Error): SystemError {
+    if (e instanceof AggregateError) {
+        return AggregateError.from(e);
     }
 
-    const exception = new Exception(e.message, e.cause);
+    const exception = new SystemError(e.message, e.cause);
     exception.stack = e.stack;
     return exception;
 }
 
-export class Exception extends Error {
-    override name = "Exception";
-    #innerError?: Exception;
+export class SystemError extends Error {
+    override name = "Error";
+    #innerError?: SystemError;
     #code?: string;
 
     #target?: string;
@@ -26,7 +26,7 @@ export class Exception extends Error {
 
         this.cause = innerError;
         this.#code = this.name;
-        if (this.cause instanceof Exception) {
+        if (this.cause instanceof SystemError) {
             this.#innerError = this.cause;
         }
 
@@ -51,7 +51,7 @@ export class Exception extends Error {
         this.#target = value;
     }
 
-    get innerException(): Exception | undefined {
+    get innerError(): SystemError | undefined {
         return this.#innerError;
     }
 
@@ -78,7 +78,8 @@ export class Exception extends Error {
     get stackTrace(): string[] {
         if (!this.#stackLines) {
             if (this.stack) {
-                this.#stackLines = this.stack.split("\n").map((line) => line.trim()).filter((o) => o.startsWith("at "));
+                this.#stackLines = this.stack.split("\n").map((line) => line.trim())
+                    .filter((o) => o.startsWith("at "));
             } else {
                 this.#stackLines = [];
             }
@@ -97,36 +98,28 @@ export class Exception extends Error {
             message: this.message,
             code: this.code,
             target: this.target,
-            innerError: this.innerException?.toObject(),
+            innerError: this.innerError?.toObject(),
         };
     }
 }
 
-export class SystemException extends Exception {
-    override name = "SystemException";
-
-    constructor(message: string, innerError?: Error) {
-        super(message, innerError);
-    }
-}
-
-export function collectException(e: Error) {
+export function collectError(e: Error) {
     const errors: Error[] = [];
 
-    walkException(e, (error) => errors.push(error));
+    walkError(e, (error) => errors.push(error));
 
     return errors;
 }
 
-export function walkException(e: Error, callback: (e: Error) => void): void {
+export function walkError(e: Error, callback: (e: Error) => void): void {
     if (e instanceof AggregateError && e.errors) {
         for (const error of e.errors) {
-            walkException(error, callback);
+            walkError(error, callback);
         }
     }
 
-    if (e instanceof SystemException && e.innerException) {
-        walkException(e.innerException, callback);
+    if (e instanceof SystemError && e.innerError) {
+        walkError(e.innerError, callback);
     }
 
     callback(e);
@@ -147,8 +140,8 @@ export function printError(e: Error, format?: (e: Error) => string): void {
         }
     }
 
-    if (e instanceof Exception && e.innerException) {
-        printError(e.innerException, format);
+    if (e instanceof SystemError && e.innerError) {
+        printError(e.innerError, format);
     }
 
     if (format) {
@@ -165,15 +158,20 @@ export function printError(e: Error, format?: (e: Error) => string): void {
  * @returns {(target: any, _propertyKey: string, descriptor: PropertyDescriptor) => PropertyDescriptor}}
  */
 export function hideStack() {
-    // deno-lint-ignore no-explicit-any
-    return function (target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+    
+    return function (
+        // deno-lint-ignore no-explicit-any
+        target: any,
+        _propertyKey: string,
+        descriptor: PropertyDescriptor,
+    ) {
         const original = descriptor.value;
         if (typeof original === "function") {
             descriptor.value = (...args: unknown[]) => {
                 try {
                     return original.apply(target, args);
                 } catch (e) {
-                    if (e instanceof Exception && e.stack) {
+                    if (e instanceof SystemError && e.stack) {
                         // first line of stack trace is the message, though could be multiple lines
                         // if the dev used '\n' in the error message.
                         // todo: figure out messages can exceed the first line.
@@ -191,13 +189,31 @@ export function hideStack() {
     };
 }
 
-export class ArgumentException extends SystemException {
+export class ResultError extends SystemError {
+    override name = "ResultError";
+    
+    constructor(message?: string, innerError?: Error) {
+        super(message || "Result is an error.", innerError);
+        this.name = "ResultError";
+    }
+}
+
+export class OptionError extends SystemError {
+    override name = "OptionError";
+    
+    constructor(message?: string, innerError?: Error) {
+        super(message || "Option is none.", innerError);
+        this.name = "OptionError";
+    }
+}
+
+export class ArgumentError extends SystemError {
     parameterName: string | null;
 
     constructor(parameterName: string | null = null, message?: string) {
         super(message || `Argument ${parameterName} is invalid.`);
         this.parameterName = parameterName;
-        this.name = "ArgumentException";
+        this.name = "ArgumentError";
     }
 
     toObject(): IError {
@@ -208,12 +224,12 @@ export class ArgumentException extends SystemException {
     }
 }
 
-export class AggregateException extends SystemException {
-    errors: Exception[];
+export class AggregateError extends SystemError {
+    errors: SystemError[];
 
-    constructor(message?: string, errors?: Exception[], innerError?: Error) {
+    constructor(message?: string, errors?: SystemError[], innerError?: Error) {
         super(message ?? "One or more errors occurred.", innerError);
-        this.name = "AggregateException";
+        this.name = "AggregateError";
         this.errors = errors ?? [];
     }
 
@@ -226,146 +242,150 @@ export class AggregateException extends SystemException {
 
     static from(error: AggregateError) {
         const innerError = error.cause instanceof Error ? from(error.cause) : error;
-        return new AggregateException(error.message, error.errors.map((o) => from(o)), innerError);
+        return new AggregateError(
+            error.message,
+            error.errors.map((o) => from(o)),
+            innerError,
+        );
     }
 }
 
-export class AssertionException extends SystemException {
+export class AssertionError extends SystemError {
     constructor(message?: string) {
         super(message || "Assertion failed.");
-        this.name = "AssertionException";
+        this.name = "AssertionError";
     }
 }
 
-export class PlatformNotSupportedException extends SystemException {
+export class PlatformNotSupportedError extends SystemError {
     constructor(message?: string) {
         super(message || "Platform is not supported.");
-        this.name = "PlatformNotSupportedException";
+        this.name = "PlatformNotSupportedError";
     }
 }
 
-export class EnvVariableNotSetException extends SystemException {
+export class EnvVariableNotSetError extends SystemError {
     constructor(variableName: string, message?: string) {
         super(message || `Environment variable ${variableName} is not set.`);
-        this.name = "EnvVariableNotSetException";
+        this.name = "EnvVariableNotSetError";
     }
 }
 
-export class FileNotFoundExeception extends SystemException {
+export class FileNotFoundExeception extends SystemError {
     constructor(message?: string) {
         super(message || "File not found.");
-        this.name = "FileNotFoundException";
+        this.name = "FileNotFoundError";
     }
 }
 
-export class DirectoryNotFoundException extends SystemException {
+export class DirectoryNotFoundError extends SystemError {
     constructor(message?: string) {
         super(message || "Directory not found.");
-        this.name = "DirectoryNotFoundException";
+        this.name = "DirectoryNotFoundError";
     }
 }
 
-export class ArgumentNullException extends ArgumentException {
+export class ArgumentNullError extends ArgumentError {
     constructor(parameterName: string | null = null) {
         super(`Argument ${parameterName} must not be null or undefined.`);
         this.parameterName = parameterName;
-        this.name = "ArgumentException";
+        this.name = "ArgumentError";
     }
 
     static validate(value: unknown, parameterName: string) {
         if (value === null || value === undefined) {
-            throw new ArgumentNullException(parameterName);
+            throw new ArgumentNullError(parameterName);
         }
     }
 }
 
-export class TimeoutException extends SystemException {
+export class TimeoutError extends SystemError {
     constructor(message?: string) {
         super(message || "Operation timed out.");
-        this.name = "TimeoutException";
+        this.name = "TimeoutError";
     }
 }
 
-export class NotSupportedException extends SystemException {
+export class NotSupportedError extends SystemError {
     constructor(message?: string) {
         super(message || "Operation is not supported.");
-        this.name = "NotSupportedException";
+        this.name = "NotSupportedError";
     }
 }
 
-export class ObjectDisposedException extends SystemException {
+export class ObjectDisposedError extends SystemError {
     constructor(message?: string, innerError?: Error) {
         super(message || "Object has been disposed.", innerError);
-        this.name = "ObjectDisposedException";
+        this.name = "ObjectDisposedError";
     }
 }
 
-export class ArgumentEmptyException extends ArgumentException {
+export class ArgumentEmptyError extends ArgumentError {
     constructor(parameterName: string | null = null) {
         super(`Argument ${parameterName} must not be null or empty.`);
         this.parameterName = parameterName;
-        this.name = "ArgumentException";
+        this.name = "ArgumentError";
     }
 }
 
-export class ArgumentWhiteSpaceException extends ArgumentException {
+export class ArgumentWhiteSpaceError extends ArgumentError {
     constructor(parameterName: string | null = null) {
         super(
             `Argument ${parameterName} must not be null, empty, or whitespace.`,
         );
         this.parameterName = parameterName;
-        this.name = "ArgumentException";
+        this.name = "ArgumentError";
     }
 }
 
-export class ArgumentRangeException extends ArgumentException {
+export class ArgumentRangeError extends ArgumentError {
     constructor(parameterName: string | null = null, message?: string) {
         super(message || `Argument ${parameterName} is out of range.`);
         this.parameterName = parameterName;
-        this.name = "ArgumentException";
+        this.name = "ArgumentError";
     }
 }
 
-export class NotImplementedException extends SystemException {
+export class NotImplementedError extends SystemError {
     constructor(message?: string) {
         super(message || "Not implemented");
-        this.name = "NotImplementedException";
+        this.name = "NotImplementedError";
     }
 }
 
-export class InvalidOperationException extends SystemException {
+export class InvalidOperationError extends SystemError {
     constructor(message?: string) {
         super(message || "Invalid operation");
-        this.name = "InvalidOperationException";
+        this.name = "InvalidOperationError";
     }
 }
 
-export class InvalidCastException extends SystemException {
+export class InvalidCastError extends SystemError {
     constructor(message?: string) {
         super(message || "Invalid cast");
-        this.name = "InvalidCastException";
+        this.name = "InvalidCastError";
     }
 }
 
-export class NullReferenceException extends SystemException {
+export class NullReferenceError extends SystemError {
     constructor(message?: string) {
         super(message || "Null or undefined reference");
-        this.name = "NullReferenceException";
+        this.name = "NullReferenceError";
     }
 }
 
-export class FormatException extends SystemException {
+export class FormatError extends SystemError {
     constructor(message?: string) {
-        super(message || "Format Exception");
-        this.name = "FormatException";
+        super(message || "Format SystemError");
+        this.name = "FormatError";
     }
 }
 
-export class NotFoundOnPathException extends SystemException {
+export class NotFoundOnPathError extends SystemError {
     executable: string | undefined;
     constructor(executable?: string, message?: string, innerError?: Error) {
         super(message || `Executable ${executable} not found on PATH.`, innerError);
-        this.name = "NotFoundOnPathException";
+        this.name = "NotFoundOnPathError";
         this.executable = executable;
     }
 
@@ -377,14 +397,23 @@ export class NotFoundOnPathException extends SystemException {
     }
 }
 
-export class ProcessException extends SystemException {
+export class ProcessError extends SystemError {
     fileName: string | undefined;
 
     exitCode: number;
 
-    constructor(fileName?: string, exitCode?: number, message?: string, innerError?: Error) {
-        super(message || `An error with a child process ${fileName} occurred. exitCode: ${exitCode}`, innerError);
-        this.name = "ProcessException";
+    constructor(
+        fileName?: string,
+        exitCode?: number,
+        message?: string,
+        innerError?: Error,
+    ) {
+        super(
+            message ||
+                `An error with a child process ${fileName} occurred. exitCode: ${exitCode}`,
+            innerError,
+        );
+        this.name = "ProcessError";
         this.exitCode = exitCode || 0;
         this.fileName = fileName;
     }

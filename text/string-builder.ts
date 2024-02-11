@@ -1,4 +1,4 @@
-import { ArgumentRangeException, NotSupportedException } from "../exceptions/mod.ts";
+import { ArgumentRangeError, NotSupportedError } from "../errors/mod.ts";
 import { NEW_LINE } from "../os/constants.ts";
 
 export class StringBuilder {
@@ -45,23 +45,28 @@ export class StringBuilder {
         return this;
     }
 
-    copyTo(target: Uint8Array, targetIndex = 0, sourceIndex = 0, length = this.#length) {
+    copyTo(
+        target: Uint8Array,
+        targetIndex = 0,
+        sourceIndex = 0,
+        length = this.#length,
+    ) {
         if (targetIndex < 0 || targetIndex >= target.length) {
-            throw new ArgumentRangeException(
+            throw new ArgumentRangeError(
                 "targetIndex",
                 `Argument 'targetIndex' must be greater than -1 less than the length of the target array.`,
             );
         }
 
         if (sourceIndex < 0 || sourceIndex >= this.#length) {
-            throw new ArgumentRangeException(
+            throw new ArgumentRangeError(
                 "sourceIndex",
                 `Argument 'sourceIndex' must be greater than -1 less than the length of the source array.`,
             );
         }
 
         if (length < 0 || length > this.#length - sourceIndex) {
-            throw new ArgumentRangeException(
+            throw new ArgumentRangeError(
                 "length",
                 `Argument 'length' must be greater than -1 less than the length of the source array.`,
             );
@@ -124,7 +129,7 @@ export class StringBuilder {
         }
 
         if (typeof value === "function") {
-            throw new NotSupportedException("Function not supported");
+            throw new NotSupportedError("Function not supported");
         }
 
         return this.appendString(value.toString());
@@ -138,7 +143,10 @@ export class StringBuilder {
 
     shrinkTo(capacity: number) {
         if (capacity < 0) {
-            throw new ArgumentRangeException("capacity", `Argument 'capacity' must be greater than -1.`);
+            throw new ArgumentRangeError(
+                "capacity",
+                `Argument 'capacity' must be greater than -1.`,
+            );
         }
 
         this.#buffer = this.#buffer.slice(0, capacity);

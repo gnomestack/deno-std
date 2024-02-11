@@ -261,7 +261,13 @@ export function osRelease(): OsRelease {
                 r.id = nav.userAgentData.platform;
                 r.idLike = nav.userAgentData.platform;
                 nav.userAgentData.getHighEntropyValues(
-                    ["architecture", "model", "platform", "platformVersion", "uaFullVersion"],
+                    [
+                        "architecture",
+                        "model",
+                        "platform",
+                        "platformVersion",
+                        "uaFullVersion",
+                    ],
                 )
                     // deno-lint-ignore no-explicit-any
                     .then((ua: any) => {

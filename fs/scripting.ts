@@ -32,21 +32,37 @@ export interface IFileSystem {
 
     expandGlob(
         glob: string | URL,
-        { root, exclude, includeDirs, extended, globstar, caseInsensitive, followSymlinks }?: fs2.ExpandGlobOptions,
+        {
+            root,
+            exclude,
+            includeDirs,
+            extended,
+            globstar,
+            caseInsensitive,
+            followSymlinks,
+        }?: fs2.ExpandGlobOptions,
     ): AsyncIterableIterator<fs2.WalkEntry>;
 
     expandGlobSync(
         glob: string | URL,
-        { root, exclude, includeDirs, extended, globstar, caseInsensitive, followSymlinks }?: fs2.ExpandGlobOptions,
+        {
+            root,
+            exclude,
+            includeDirs,
+            extended,
+            globstar,
+            caseInsensitive,
+            followSymlinks,
+        }?: fs2.ExpandGlobOptions,
     ): IterableIterator<fs2.WalkEntry>;
 
     exists(path: string): Promise<boolean>;
 
     existsSync(path: string): boolean;
 
-    readDirectory(path: string | URL): AsyncIterable<IDirectoryInfo>;
+    readDir(path: string | URL): AsyncIterable<IDirectoryInfo>;
 
-    readDirectorySync(path: string | URL): Iterable<IDirectoryInfo>;
+    readDirSync(path: string | URL): Iterable<IDirectoryInfo>;
 
     rename(oldPath: string | URL, newPath: string | URL): Promise<void>;
 
@@ -56,13 +72,14 @@ export interface IFileSystem {
 
     readLink(path: string | URL): Promise<string>;
 
-    mkdir(path: string | URL, options?: ICreateDirectoryOptions | undefined): Promise<void>;
+    makeDir(
+        path: string | URL,
+        options?: ICreateDirectoryOptions | undefined,
+    ): Promise<void>;
 
-    makeDirectory(path: string | URL, options?: ICreateDirectoryOptions): Promise<void>;
+    makeTempDir(options?: IMakeTempOptions): Promise<string>;
 
-    makeTempDirectory(options?: IMakeTempOptions): Promise<string>;
-
-    makeTempDirectorySync(options?: IMakeTempOptions): string;
+    makeTempDirSync(options?: IMakeTempOptions): string;
 
     makeTempFile(options?: IMakeTempOptions): Promise<string>;
 
@@ -76,9 +93,9 @@ export interface IFileSystem {
 
     statSync(path: string | URL): IFileInfo;
 
-    isDirectory(path: string | URL): Promise<boolean>;
+    isDir(path: string | URL): Promise<boolean>;
 
-    isDirectorySync(path: string | URL): boolean;
+    isDirSync(path: string | URL): boolean;
 
     isFile(path: string | URL): Promise<boolean>;
 
@@ -100,9 +117,17 @@ export interface IFileSystem {
 
     removeSync(path: string | URL, options?: IRemoveOptions): void;
 
-    symlink(target: string | URL, path: string | URL, type?: ISymlinkOptions): Promise<void>;
+    symlink(
+        target: string | URL,
+        path: string | URL,
+        type?: ISymlinkOptions,
+    ): Promise<void>;
 
-    symlinkSync(target: string | URL, path: string | URL, type?: ISymlinkOptions): void;
+    symlinkSync(
+        target: string | URL,
+        path: string | URL,
+        type?: ISymlinkOptions,
+    ): void;
 
     writeTextFile(path: string | URL, data: string): Promise<void>;
 

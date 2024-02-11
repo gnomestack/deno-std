@@ -1,4 +1,4 @@
-import { InvalidOperationException, PlatformNotSupportedException } from "../../exceptions/mod.ts";
+import { InvalidOperationError, PlatformNotSupportedError } from "../../errors/mod.ts";
 import { IS_WINDOWS } from "../constants.ts";
 
 class OSVERSIONINFOEXWView {
@@ -159,7 +159,9 @@ export function rtlGetVersion() {
         return view;
     }
     if (!IS_WINDOWS) {
-        throw new PlatformNotSupportedException("This function is only supported on Windows.");
+        throw new PlatformNotSupportedError(
+            "This function is only supported on Windows.",
+        );
     }
 
     const OSVERSIONINFOEX_SIZE = 284;
@@ -186,7 +188,9 @@ export function rtlGetVersion() {
 
     // Check the status
     if (status !== 0) {
-        throw new InvalidOperationException(`RtlGetVersion failed with status: ${status}`);
+        throw new InvalidOperationError(
+            `RtlGetVersion failed with status: ${status}`,
+        );
     }
 
     // Create a view for the returned data

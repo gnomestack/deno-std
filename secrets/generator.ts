@@ -1,4 +1,4 @@
-import { Exception } from "../exceptions/mod.ts";
+import { OptionError } from "../errors/mod.ts";
 import { isDigitCodePoint, isLetterCodePoint, isUpperCodePoint } from "../primitives/char.ts";
 import { randomBytes } from "../random/mod.ts";
 
@@ -102,7 +102,7 @@ export class SecretGenerator {
         }
 
         if (!valid) {
-            throw new Exception("Failed to generate secret");
+            throw new OptionError("Failed to generate secret");
         }
 
         return chars;

@@ -1,11 +1,15 @@
-import { PlatformNotSupportedException } from "../../exceptions/mod.ts";
+import { PlatformNotSupportedError } from "../../errors/mod.ts";
 import { IS_WINDOWS } from "../constants.ts";
 
 let isProcessElevatedValue: boolean | undefined = undefined;
 
-export function isProcessElevated(onNativeError?: (e: unknown) => void): boolean {
+export function isProcessElevated(
+    onNativeError?: (e: unknown) => void,
+): boolean {
     if (!IS_WINDOWS) {
-        throw new PlatformNotSupportedException("This function is only supported on Windows.");
+        throw new PlatformNotSupportedError(
+            "This function is only supported on Windows.",
+        );
     }
 
     try {

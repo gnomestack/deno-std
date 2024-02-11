@@ -10,6 +10,7 @@ export type OsFamily =
     | "aix"
     | "solaris"
     | "illumos"
+    | "android"
     | "unknown";
 export type RuntimeArch =
     | "arm"
@@ -44,6 +45,7 @@ export const osType: OsFamily = (() => {
     return "linux";
 })();
 
+Deno.build.os 
 let osRelease: string | undefined;
 try {
     osRelease = Deno.osRelease();

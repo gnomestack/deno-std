@@ -53,7 +53,8 @@ function detectCi() {
         }
 
         if (
-            ["TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "BUILDKITE", "DRONE"].some((sign) => env.has(sign)) ||
+            ["TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "BUILDKITE", "DRONE"]
+                .some((sign) => env.has(sign)) ||
             env.get("CI_NAME") === "codeship"
         ) {
             return AnsiMode.FourBit;
@@ -122,7 +123,10 @@ export function detectMode() {
     if (IS_DARWIN) {
         const termProgram = env.get("TERM_PROGRAM");
         if (termProgram !== undefined) {
-            const version = Number.parseInt((env.get("TERM_PROGRAM_VERSION") || "").split(".")[0], 10);
+            const version = Number.parseInt(
+                (env.get("TERM_PROGRAM_VERSION") || "").split(".")[0],
+                10,
+            );
 
             switch (termProgram) {
                 case "iTerm.app": {

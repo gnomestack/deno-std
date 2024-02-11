@@ -1,7 +1,7 @@
 import { randomUUID } from "../random/mod.ts";
 import { uuidV4 } from "../deps.ts";
 import { Lazy } from "./lazy.ts";
-import { Exception } from "../exceptions/mod.ts";
+import { OptionError } from "../errors/mod.ts";
 
 const emptyValue = "00000000-0000-0000-0000-000000000000";
 const emptyGuid = new Lazy<Guid>(() => new Guid(emptyValue));
@@ -14,7 +14,7 @@ export class Guid {
     constructor() {
         if (arguments.length == 1 && typeof arguments[0] === "string") {
             if (!uuidV4.validate(arguments[0])) {
-                throw new Exception("Invalid Guid");
+                throw new OptionError("Invalid Guid");
             }
 
             this.#value = arguments[0];
@@ -37,7 +37,7 @@ export class Guid {
 
     static parse(value: string): Guid {
         if (!uuidV4.validate(value)) {
-            throw new Exception(`Invalid Guid ${value}`);
+            throw new OptionError(`Invalid Guid ${value}`);
         }
 
         return new Guid(value);

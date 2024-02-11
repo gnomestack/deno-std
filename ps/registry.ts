@@ -17,7 +17,11 @@ export interface IPathFinderOptions {
 
 const registry = new Map<string, IPathFinderOptions>();
 
-export function registerExe(name: string, options?: Partial<IPathFinderOptions>, force = false) {
+export function registerExe(
+    name: string,
+    options?: Partial<IPathFinderOptions>,
+    force = false,
+) {
     let o = registry.get(name);
     if (o) {
         if (force && options) {

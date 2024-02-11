@@ -1,6 +1,6 @@
 // TODO: implement unicode tables / unicode categories
 
-import { Exception } from "../exceptions/mod.ts";
+import { OptionError } from "../errors/mod.ts";
 
 export enum UnicodeCategory {
     UppercaseLetter = 0,
@@ -77,7 +77,7 @@ export class Char {
 
     constructor(value: number) {
         if (!Number.isInteger(value)) {
-            throw new Exception(
+            throw new OptionError(
                 "Invalid character value, value must be an integer",
             );
         }
@@ -211,7 +211,11 @@ export function isLetter(value: Char): boolean {
     return IS_LETTER_EXP.test(String.fromCodePoint(value.value));
 }
 
-export function isCharBetweenCodePoint(value: number, start: number, end: number) {
+export function isCharBetweenCodePoint(
+    value: number,
+    start: number,
+    end: number,
+) {
     return value >= start && value <= end;
 }
 

@@ -1,24 +1,38 @@
 import { isWhiteSpaceAt } from "../primitives/char.ts";
 
 import {
-    ArgumentEmptyException,
-    ArgumentNullException,
-    ArgumentWhiteSpaceException,
-    InvalidOperationException,
-    NullReferenceException,
-} from "../exceptions/mod.ts";
+    ArgumentEmptyError,
+    ArgumentNullError,
+    ArgumentWhiteSpaceError,
+    InvalidOperationError,
+    NullReferenceError,
+} from "../errors/mod.ts";
 
-export function notNull<T>(value: T | undefined | null, parameterName: string): asserts value is NonNullable<T>;
-export function notNull(value: unknown, parameterName: string): asserts value is NonNullable<unknown> {
+export function notNull<T>(
+    value: T | undefined | null,
+    parameterName: string,
+): asserts value is NonNullable<T>;
+export function notNull(
+    value: unknown,
+    parameterName: string,
+): asserts value is NonNullable<unknown> {
     if (value === null && value === undefined) {
-        throw new ArgumentNullException(parameterName);
+        throw new ArgumentNullError(parameterName);
     }
 }
 
-export function notNullRef<T>(value: T | undefined | null, expression: string): asserts value is NonNullable<T>;
-export function notNullRef(value: unknown, expression: string): asserts value is NonNullable<unknown> {
+export function notNullRef<T>(
+    value: T | undefined | null,
+    expression: string,
+): asserts value is NonNullable<T>;
+export function notNullRef(
+    value: unknown,
+    expression: string,
+): asserts value is NonNullable<unknown> {
     if (value === null && value === undefined) {
-        throw new NullReferenceException(`${expression} must not be null or undefined.`);
+        throw new NullReferenceError(
+            `${expression} must not be null or undefined.`,
+        );
     }
 }
 
@@ -27,7 +41,7 @@ export function notEmpty(
     parameterName: string,
 ): asserts value is NonNullable<ArrayLike<unknown>> {
     if (value === null || value === undefined || value.length === 0) {
-        throw new ArgumentEmptyException(parameterName);
+        throw new ArgumentEmptyError(parameterName);
     }
 }
 
@@ -36,7 +50,7 @@ export function notNullOrWhiteSpace(
     parameterName: string,
 ): asserts value is NonNullable<string> {
     if (value === null || value === undefined || value.length === 0) {
-        throw new ArgumentEmptyException(parameterName);
+        throw new ArgumentEmptyError(parameterName);
     }
 
     for (let i = 0; i < value.length; i++) {
@@ -45,18 +59,24 @@ export function notNullOrWhiteSpace(
         }
     }
 
-    throw new ArgumentWhiteSpaceException(parameterName);
+    throw new ArgumentWhiteSpaceError(parameterName);
 }
 
-export function expression(expression: unknown, message?: string): asserts expression {
+export function expression(
+    expression: unknown,
+    message?: string,
+): asserts expression {
     if (!expression) {
-        throw new InvalidOperationException(message);
+        throw new InvalidOperationError(message);
     }
 }
 
-export function assert(expression: unknown, message?: string): asserts expression {
+export function assert(
+    expression: unknown,
+    message?: string,
+): asserts expression {
     if (!expression) {
-        throw new InvalidOperationException(message);
+        throw new InvalidOperationError(message);
     }
 }
 

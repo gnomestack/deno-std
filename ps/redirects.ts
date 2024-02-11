@@ -1,5 +1,5 @@
 import { NEW_LINE } from "../os/constants.ts";
-import { StringBuilder } from "../text/string_builder.ts";
+import { StringBuilder } from "../text/string-builder.ts";
 
 export interface IPsCapture {
     next(data: Uint8Array): void;
@@ -49,7 +49,10 @@ export class StringArrayCapture implements IPsCapture {
     }
 }
 
-export function redirect(stream: ReadableStream<Uint8Array>, captures: IPsCapture[]) {
+export function redirect(
+    stream: ReadableStream<Uint8Array>,
+    captures: IPsCapture[],
+) {
     const reader = stream.getReader();
     let done = false;
 

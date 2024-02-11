@@ -140,6 +140,8 @@ export interface ICommandOutput {
  */
 export type Stdio = "inherit" | "piped" | "null";
 
+export type StdInput = string | ReadableStream<Uint8Array> | Uint8Array | IPsOutput
+
 export interface ICommandOptions {
     /**
      * The working directory of the process.
@@ -204,6 +206,14 @@ export interface IPsOutputArgs {
     stderr: Uint8Array;
     start: Date;
     end?: Date;
+}
+
+export interface PsFactory {
+    (file: string | URL, args?: ExecArgs, options?: ICommandOptions): IPsCommand;
+}
+
+export interface IPipeFactory {
+    create(process: IChildProcess) : IPipe
 }
 
 export interface IPsStartInfo extends ICommandOptions {
@@ -280,6 +290,15 @@ export interface IChildProcess {
      */
     readonly stderr: ReadableStream<Uint8Array>;
 
+    arrayBuffer(): Promise<ArrayBuffer>;
+
+    blob(): Promise<Blob>;
+
+    // deno-lint-ignore no-explicit-any
+    json(): Promise<any>;
+
+    kill(signal?: Signal): void;
+
     /**
      * Pipes the output of this instance to the input of the
      * the next process.
@@ -301,7 +320,9 @@ export interface IChildProcess {
 
     output(): Promise<IPsOutput>;
 
-    kill(signal?: Signal): void;
+    lines(): AsyncIterable<string>;
+
+    text(): Promise<string>;
 
     ref(): void;
 
@@ -424,3 +445,12 @@ export interface IExecOptions extends IExecSyncOptions {
 }
 
 export type ExecArgs = string | string[] | Record<string, unknown>;
+
+
+export interface IPsPreHook {
+    (si: IPsStartInfo): void;
+}
+
+export interface IPsPostHook {
+    (si: IPsStartInfo, result: IPsOutput): void;
+}

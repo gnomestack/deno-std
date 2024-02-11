@@ -10,6 +10,22 @@ test.when(hasEnv && hasRead, "which: found", async () => {
     assert.exists(gitPath);
 });
 
+test.when(hasEnv && hasRead, "which: linked", async () => {
+    const python3 = await which("python3");
+    assert.exists(python3);
+});
+
+test.when(hasEnv && hasRead, "whichSync: linked", () => {
+    const python3 = whichSync("python3");
+    assert.exists(python3);
+});
+
+test.when(hasEnv && hasRead, "which: not found", async () => {
+    const pwsh = await which("pwsh");
+    assert.exists(pwsh);
+    assert.truthy(pwsh.endsWith("pwsh.exe") || pwsh.endsWith("pwsh"));
+});
+
 test.when(hasEnv && hasRead, "which: not found", async () => {
     const gitPath = await which("git-not-found");
     assert.falsey(gitPath, "git-not-found should not be found");

@@ -31,4 +31,15 @@ export type Stdin = IReader & IReaderSync & ICloser & {
 export const stdout: Stdout = Deno.stdout;
 export const stderr: Stdout = Deno.stderr;
 export const stdin: Stdin = Deno.stdin;
-export const args = Deno.args;
+export const args = (function() { 
+    try {
+        if (Deno.permissions.querySync({ name: 'read' }).state === 'granted') {
+            return Deno.args
+        }
+
+        return []
+    } catch {  
+        return []
+    }
+}
+)();

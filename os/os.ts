@@ -29,7 +29,11 @@ export function tmpDir(): string {
 }
 
 export function uid(): number | null {
-    return Deno.uid();
+    if (Deno.permissions.querySync({ name: 'sys' }).state === 'granted') {
+        return Deno.uid();
+    }
+
+    return null;
 }
 
 export function gid(): number | null {

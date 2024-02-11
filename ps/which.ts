@@ -2,12 +2,12 @@ import * as env from "../os/env.ts";
 import { basename, basenameWithoutExtension, isAbsolute, join, resolve } from "../path/mod.ts";
 import {
     IDirectoryInfo,
-    isDirectory,
-    isDirectorySync,
+    isDir,
+    isDirSync,
     isFile,
     isFileSync,
-    readDirectory,
-    readDirectorySync,
+    readDir,
+    readDirSync,
 } from "../fs/mod.ts";
 import { IS_WINDOWS as isWindows } from "../os/constants.ts";
 import { isNullOrEmpty, isNullOrWhiteSpace } from "../primitives/str.ts";
@@ -85,7 +85,7 @@ export function whichSync(
     }
 
     for (const pathSegment of pathSegments) {
-        if (isNullOrEmpty(pathSegment) || !isDirectorySync(pathSegment)) {
+        if (isNullOrEmpty(pathSegment) || !isDirSync(pathSegment)) {
             continue;
         }
 
@@ -97,7 +97,7 @@ export function whichSync(
             if (!hasPathExt) {
                 try {
                     let first: IDirectoryInfo | undefined;
-                    for (const entry of readDirectorySync(pathSegment)) {
+                    for (const entry of readDirSync(pathSegment)) {
                         if (entry.isFile) {
                             for (const ext of pathExtSegments) {
                                 if (entry.name?.toLowerCase() === baseNameLowered + ext) {
@@ -126,7 +126,7 @@ export function whichSync(
             } else {
                 try {
                     let first: IDirectoryInfo | undefined;
-                    for (const entry of readDirectorySync(pathSegment)) {
+                    for (const entry of readDirSync(pathSegment)) {
                         if (entry.isFile && entry.name?.toLowerCase() === baseNameLowered) {
                             first = entry;
                             break;
@@ -147,7 +147,7 @@ export function whichSync(
         } else {
             try {
                 let first: IDirectoryInfo | undefined;
-                for (const entry of readDirectorySync(pathSegment)) {
+                for (const entry of readDirSync(pathSegment)) {
                     if (entry.isFile && entry.name?.toLowerCase() === baseNameLowered) {
                         first = entry;
                         break;
@@ -244,8 +244,8 @@ export async function which(
             continue;
         }
 
-        const isDir = await isDirectory(pathSegment);
-        if (!isDir) {
+        const isDirectory = await isDir(pathSegment);
+        if (!isDirectory) {
             continue;
         }
 
@@ -257,7 +257,7 @@ export async function which(
             if (!hasPathExt) {
                 try {
                     let first: IDirectoryInfo | undefined;
-                    for await (const entry of readDirectory(pathSegment)) {
+                    for await (const entry of readDir(pathSegment)) {
                         if (!entry.isDirectory) {
                             for (const ext of pathExtSegments) {
                                 if (entry.name?.toLowerCase() === baseNameLowered + ext) {
@@ -286,8 +286,11 @@ export async function which(
             } else {
                 try {
                     let first: IDirectoryInfo | undefined;
-                    for await (const entry of readDirectory(pathSegment)) {
-                        if (!entry.isDirectory && entry.name?.toLowerCase() === baseNameLowered) {
+                    for await (const entry of readDir(pathSegment)) {
+                        if (
+                            !entry.isDirectory &&
+                            entry.name?.toLowerCase() === baseNameLowered
+                        ) {
                             first = entry;
                             break;
                         }
@@ -307,8 +310,10 @@ export async function which(
         } else {
             try {
                 let first: IDirectoryInfo | undefined;
-                for await (const entry of readDirectory(pathSegment)) {
-                    if (!entry.isDirectory && entry.name?.toLowerCase() === baseNameLowered) {
+                for await (const entry of readDir(pathSegment)) {
+                    if (
+                        !entry.isDirectory && entry.name?.toLowerCase() === baseNameLowered
+                    ) {
                         first = entry;
                         break;
                     }

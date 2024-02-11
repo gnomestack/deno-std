@@ -4,10 +4,12 @@
 // Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 
 import { dasherize, underscore } from "../text/inflections.ts";
-import { ISplatOptions } from "./interfaces.ts";
+import { ISplatOptions } from "./types.ts";
 
 const match = (array: unknown[], value: string) =>
-    array.some((element) => (element instanceof RegExp ? element.test(value) : element === value));
+    array.some((
+        element,
+    ) => (element instanceof RegExp ? element.test(value) : element === value));
 
 /**
  * Converts an object to an array of command line arguments.
@@ -15,7 +17,10 @@ const match = (array: unknown[], value: string) =>
  * @param options The options to use
  * @returns An array of command line arguments
  */
-export function splat(object: Record<string, unknown>, options?: ISplatOptions) {
+export function splat(
+    object: Record<string, unknown>,
+    options?: ISplatOptions,
+) {
     const splat = [];
     let extraArguments = [];
     let separatedArguments = [];
@@ -100,6 +105,11 @@ export function splat(object: Record<string, unknown>, options?: ISplatOptions) 
         }
 
         if (key === "_") {
+            if (typeof value === "string") {
+                extraArguments = [value];
+                continue;
+            }
+
             if (!Array.isArray(value)) {
                 throw new TypeError(
                     `Expected key \`_\` to be Array, got ${typeof value}`,
@@ -134,7 +144,7 @@ export function splat(object: Record<string, unknown>, options?: ISplatOptions) 
     }
 
     for (const argument of extraArguments) {
-        splat.push(String(argument));
+        splat.unshift(String(argument));
     }
 
     if (separatedArguments.length > 0) {

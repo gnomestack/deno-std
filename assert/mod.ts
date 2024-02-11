@@ -91,7 +91,12 @@ export type Assertion = {
     ): Promise<E | Error | unknown>;
     truthy(expr: unknown, msg?: string): asserts expr;
     ok(expr: unknown, msg?: string): asserts expr;
-    almostEquals(actual: number, expected: number, delta?: number, msg?: string): void;
+    almostEquals(
+        actual: number,
+        expected: number,
+        delta?: number,
+        msg?: string,
+    ): void;
     falsey(expr: unknown, msg?: string): asserts expr;
     stringIncludes(actual: string, expected: string, msg?: string): void;
     instanceOf<T extends AnyConstructor>(

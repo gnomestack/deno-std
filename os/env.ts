@@ -1,9 +1,9 @@
 import { CHAR_UNDERSCORE } from "../primitives/char-constants.ts";
 import { IS_DENO, IS_NODELIKE } from "../runtime/mod.ts";
 import { equalsIgnoreCase } from "../primitives/str.ts";
-import { StringBuilder } from "../text/string_builder.ts";
+import { StringBuilder } from "../text/string-builder.ts";
 import { IS_WINDOWS, PATH_SEPARATOR, PATH_VAR_NAME } from "./constants.ts";
-import { EnvVariableNotSetException, Exception } from "../exceptions/mod.ts";
+import { EnvVariableNotSetError, OptionError } from "../errors/mod.ts";
 
 export const secrets: string[] = [];
 
@@ -59,7 +59,7 @@ export function getOrDefault(key: string, defaultValue: string): string {
 export function getRequired(key: string): string {
     const value = getVar(key);
     if (value === undefined) {
-        throw new EnvVariableNotSetException(key);
+        throw new EnvVariableNotSetError(key);
     }
     return value;
 }
@@ -104,7 +104,7 @@ export function set(): void {
             break;
 
         default:
-            throw new Exception("Invalid number of arguments.");
+            throw new OptionError("Invalid number of arguments.");
     }
 }
 
@@ -156,7 +156,10 @@ function isValidBashVariable(value: string) {
     return true;
 }
 
-export function expand(template: string, options?: IEnvSubstitutionOptions): string {
+export function expand(
+    template: string,
+    options?: IEnvSubstitutionOptions,
+): string {
     if (typeof template !== "string" || template.length === 0) {
         return "";
     }
@@ -169,7 +172,8 @@ export function expand(template: string, options?: IEnvSubstitutionOptions): str
         unixArgsExpansion: true,
     };
     const getValue = o.getVariable ?? ((name: string) => get(name));
-    const setValue = o.setVariable ?? ((name: string, value: string) => set(name, value));
+    const setValue = o.setVariable ??
+        ((name: string, value: string) => set(name, value));
     const tokenBuilder = new StringBuilder();
     const output = new StringBuilder();
     let kind = TokenKind.None;
@@ -239,7 +243,9 @@ export function expand(template: string, options?: IEnvSubstitutionOptions): str
         if (kind === TokenKind.BashInterpolation && c === closeBrace) {
             if (tokenBuilder.length === 0) {
                 // with bash '${}' is a bad substitution.
-                throw new Exception("${} is a bad substitution. Variable name not provided.");
+                throw new OptionError(
+                    "${} is a bad substitution. Variable name not provided.",
+                );
             }
 
             const substitution = tokenBuilder.toString();
@@ -275,29 +281,32 @@ export function expand(template: string, options?: IEnvSubstitutionOptions): str
             }
 
             if (key.length === 0) {
-                throw new Exception("Bad substitution, empty variable name.");
+                throw new OptionError("Bad substitution, empty variable name.");
             }
 
             if (!isValidBashVariable(key)) {
-                throw new Exception(`Bad substitution, invalid variable name ${key}.`);
+                throw new OptionError(`Bad substitution, invalid variable name ${key}.`);
             }
 
             const value = getValue(key);
             if (value !== undefined) {
                 output.appendString(value);
             } else if (message !== undefined) {
-                throw new Exception(message);
+                throw new OptionError(message);
             } else if (defaultValue.length > 0) {
                 output.appendString(defaultValue);
             } else {
-                throw new Exception(`Bad substitution, variable ${key} is not set.`);
+                throw new OptionError(`Bad substitution, variable ${key} is not set.`);
             }
 
             kind = TokenKind.None;
             continue;
         }
 
-        if (kind === TokenKind.BashVariable && (!(isLetterOrDigit(c) || c === CHAR_UNDERSCORE) || remaining === 0)) {
+        if (
+            kind === TokenKind.BashVariable &&
+            (!(isLetterOrDigit(c) || c === CHAR_UNDERSCORE) || remaining === 0)
+        ) {
             // '\' is used to escape the next character, so don't append it.
             // its used to escape a name like $HOME\\_TEST where _TEST is not
             // part of the variable name.
@@ -317,7 +326,7 @@ export function expand(template: string, options?: IEnvSubstitutionOptions): str
             const key = tokenBuilder.toString();
             tokenBuilder.clear();
             if (key.length === 0) {
-                throw new Exception("Bad substitution, empty variable name.");
+                throw new OptionError("Bad substitution, empty variable name.");
             }
 
             const index = parseInt(key);
@@ -335,7 +344,7 @@ export function expand(template: string, options?: IEnvSubstitutionOptions): str
             }
 
             if (!isValidBashVariable(key)) {
-                throw new Exception(`Bad substitution, invalid variable name ${key}.`);
+                throw new OptionError(`Bad substitution, invalid variable name ${key}.`);
             }
 
             const value = getValue(key);
@@ -344,7 +353,7 @@ export function expand(template: string, options?: IEnvSubstitutionOptions): str
             }
 
             if (value === undefined) {
-                throw new Exception(`Bad substitution, variable ${key} is not set.`);
+                throw new OptionError(`Bad substitution, variable ${key} is not set.`);
             }
 
             if (append) {
@@ -358,11 +367,11 @@ export function expand(template: string, options?: IEnvSubstitutionOptions): str
         tokenBuilder.appendChar(c);
         if (remaining === 0) {
             if (kind === TokenKind.Windows) {
-                throw new Exception("Bad substitution, missing closing token '%'.");
+                throw new OptionError("Bad substitution, missing closing token '%'.");
             }
 
             if (kind === TokenKind.BashInterpolation) {
-                throw new Exception("Bad substitution, missing closing token '}'.");
+                throw new OptionError("Bad substitution, missing closing token '}'.");
             }
         }
     }

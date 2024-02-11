@@ -1,12 +1,11 @@
 import {
-    args,
     capture,
     captureSync,
     chdir,
     cwd,
-    exec,
+    run,
     ExecArgs,
-    execSync,
+    runSync,
     exit,
     IExecOptions,
     IExecSyncOptions,
@@ -14,7 +13,7 @@ import {
     ISplatOptions,
     Ps,
     ps as create,
-    PsOutput,
+    IPsOutput,
     splat,
     stderr,
     stdin,
@@ -54,13 +53,25 @@ export interface IProcess {
 
     create(exec: string, args?: ExecArgs, options?: IExecOptions): Ps;
 
-    capture(exe: string, args?: ExecArgs, options?: Omit<IExecOptions, "stdout" | "stderr">): Promise<PsOutput>;
+    capture(
+        exe: string,
+        args?: ExecArgs,
+        options?: Omit<IExecOptions, "stdout" | "stderr">,
+    ): Promise<IPsOutput>;
 
-    captureSync(exe: string, args?: ExecArgs, options?: Omit<IExecSyncOptions, "stdout" | "stderr">): PsOutput;
+    captureSync(
+        exe: string,
+        args?: ExecArgs,
+        options?: Omit<IExecSyncOptions, "stdout" | "stderr">,
+    ): IPsOutput;
 
-    exec(exec: string, args?: ExecArgs, options?: IExecOptions): Promise<PsOutput>;
+    run(
+        exec: string,
+        args?: ExecArgs,
+        options?: Omit<IExecOptions, "stdout" | "stderr">,
+    ): Promise<IPsOutput>;
 
-    execSync(exec: string, args?: ExecArgs, options?: IExecSyncOptions): PsOutput;
+    runSync(exec: string, args?: ExecArgs, options?: Omit<IExecSyncOptions, "stdout" | "stderr">): IPsOutput;
 
     isatty(rid: number): boolean;
 
@@ -77,18 +88,30 @@ export interface IProcess {
     whichSync(exec: string): string | undefined;
 }
 
-const defaultCwd = cwd();
+const defaultCwd = (function(){ try { return cwd() } catch { return "" } })();
 const cwdHistory: string[] = [];
 
+let a : string[] = [];
+try {
+    if (Deno.permissions.querySync({ name: 'read' }).state === 'granted') {
+        cwdHistory.push(cwd());
+        a = Deno.args;
+    }
+}  catch(e) {
+    console.log(e);
+    // do nothing
+}
+
+
 export const ps: IProcess = {
-    args: args,
+    args: a,
     /**
      * Gets or sets the current working directory of the process.
      */
     cwd: "",
-    stdin,
-    stdout,
-    stderr,
+    stdin: Deno.stdin,
+    stdout: Deno.stdout,
+    stderr: Deno.stderr,
     isElevated: isProcessElevated(),
     push(path: string) {
         cwdHistory.push(cwd());
@@ -103,8 +126,8 @@ export const ps: IProcess = {
     capture,
     captureSync,
     isatty,
-    exec,
-    execSync,
+    run,
+    runSync,
     exit,
     which,
     whichSync,
