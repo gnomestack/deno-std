@@ -2,7 +2,7 @@ import { assert, test } from "../testing/mod.ts";
 import { isEnvEnabled, isRunEnabled } from "../testing/deno_permissions.ts";
 import { get } from "../os/env.ts";
 import { HOME_VAR_NAME } from "../os/constants.ts";
-import { ps, run, runSync, capture, captureSync, whichSync } from "./mod.ts";
+import { ps, run, runSync, quietRun, quietRunSync, whichSync } from "./mod.ts";
 
 const hasRun = await isRunEnabled();
 const hasEnv = await isEnvEnabled();
@@ -38,7 +38,7 @@ test.when(hasGit, "execSync: failure", () => {
 });
 
 test.when(hasGit, "capture: success", async () => {
-    const { code, stdoutText , stdout, args} = await capture("git", "--version");
+    const { code, stdoutText , stdout, args} = await quietRun("git", "--version");
     assert.equals(code, 0);
     console.log(args);
     console.log("stdout", stdoutText);
@@ -48,7 +48,7 @@ test.when(hasGit, "capture: success", async () => {
 });
 
 test.when(hasGit, "capture: failure", async () => {
-    const { code, stderrText, stdoutText } = await capture("git", "not-a-command");
+    const { code, stderrText, stdoutText } = await quietRun("git", "not-a-command");
     assert.equals(code, 1);
     console.log("out", stdoutText)
     console.log("err", stderrText)
@@ -59,13 +59,13 @@ test.when(hasGit, "capture: failure", async () => {
 });
 
 test.when(hasGit, "captureSync: success", () => {
-    const { code, stdoutText } = captureSync("git", "--version");
+    const { code, stdoutText } = quietRunSync("git", "--version");
     assert.equals(code, 0);
     assert.stringIncludes(stdoutText, "git version");
 });
 
 test.when(hasGit, "captureSync: failure", () => {
-    const { code, stderrText } = captureSync("git", "not-a-command");
+    const { code, stderrText } = quietRunSync("git", "not-a-command");
     assert.equals(code, 1);
     assert.stringIncludes(
         stderrText,
@@ -79,7 +79,7 @@ test.when(hasGit, "output: success with inherit pipe", async () => {
 });
 
 test.when(hasGit, "output: success with capture pipe", async () => {
-    const { code, stdoutText } = await capture("git", "--version");
+    const { code, stdoutText } = await quietRun("git", "--version");
     assert.equals(code, 0);
     assert.stringIncludes(stdoutText, "git version");
 });
@@ -120,7 +120,7 @@ test.when(hasGit, "outputSync: success with inherit pipe", () => {
 });
 
 test.when(hasGit, "outputSync: success with capture pipe", () => {
-    const { code, stdoutText } = captureSync("git", ["--version"]);
+    const { code, stdoutText } = quietRunSync("git", ["--version"]);
     assert.equals(code, 0);
     assert.stringIncludes(stdoutText, "git version");
 });
@@ -158,7 +158,7 @@ test.when(hasEcho, "ps: blob()", async () => {
 
 
 test.when(hasGit, "outputSync: success with capture pipe", () => {
-    const { code, stdoutText } = captureSync("git", ["--version"]);
+    const { code, stdoutText } = quietRunSync("git", ["--version"]);
     assert.equals(code, 0);
     assert.stringIncludes(stdoutText, "git version");
 });
@@ -171,19 +171,19 @@ test.when(hasCat, "ps: cat using input", async () => {
 });
 
 test.when(hasEcho, "splat arguments with extra arguments (string)", async () => {
-    const result = await capture("echo", { _: "hello" });
+    const result = await quietRun("echo", { _: "hello" });
     assert.equals(result.code, 0);
     assert.equals(result.stdoutText, "hello\n");
 });
 
 test.when(hasEcho, "splat arguments with extra arguments (array)", async () => {
-    const result = await capture("echo", { _: ["hello"] });
+    const result = await quietRun("echo", { _: ["hello"] });
     assert.equals(result.code, 0);
     assert.equals(result.stdoutText, "hello\n");
 });
 
 test.when(hasEcho, "splat arguments with ordered arguments", async () => {
-    const result = await capture("echo", { text: "hello" }, {
+    const result = await quietRun("echo", { text: "hello" }, {
         splat: { arguments: ['text'] }
     });
     assert.equals(result.code, 0);
@@ -192,7 +192,7 @@ test.when(hasEcho, "splat arguments with ordered arguments", async () => {
 
 test.when(hasEcho, "splat arguments with parameters", async () => {
     // converts version to --version
-    const result2 = await capture("git", { 'version': true });
+    const result2 = await quietRun("git", { 'version': true });
     assert.equals(result2.code, 0);
     assert.stringIncludes(result2.stdoutText, "git version");
 });
@@ -212,7 +212,7 @@ test.when(
     "outputSync: failure with piped & different cwd",
     () => {
         const home = get(HOME_VAR_NAME);
-        const { code, stderrText } = captureSync("git", ["status", "-s"], { cwd: home });
+        const { code, stderrText } = quietRunSync("git", ["status", "-s"], { cwd: home });
         assert.equals(code, 128);
         assert.stringIncludes(
             stderrText,

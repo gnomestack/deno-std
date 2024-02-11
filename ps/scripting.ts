@@ -1,6 +1,6 @@
 import {
-    capture,
-    captureSync,
+    quietRun,
+    quietRunSync,
     chdir,
     cwd,
     run,
@@ -53,13 +53,13 @@ export interface IProcess {
 
     create(exec: string, args?: ExecArgs, options?: IExecOptions): Ps;
 
-    capture(
+    quietRun(
         exe: string,
         args?: ExecArgs,
         options?: Omit<IExecOptions, "stdout" | "stderr">,
     ): Promise<IPsOutput>;
 
-    captureSync(
+    quietRunSync(
         exe: string,
         args?: ExecArgs,
         options?: Omit<IExecSyncOptions, "stdout" | "stderr">,
@@ -123,8 +123,8 @@ export const ps: IProcess = {
         return last;
     },
     create,
-    capture,
-    captureSync,
+    quietRun,
+    quietRunSync,
     isatty,
     run,
     runSync,

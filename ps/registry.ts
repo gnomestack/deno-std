@@ -68,7 +68,14 @@ export function registerExe(
     return o;
 }
 
-export function findExeSync(name: string) {
+export function findExeSync(name: string | URL) {
+    if (name instanceof URL) {
+        if (name.protocol !== 'file:')
+            throw new Error("Only file URLs are supported");
+        
+        name = name.toString();
+    }
+
     if (isAbsolute(name) && isFileSync(name)) {
         return name;
     }
@@ -167,7 +174,14 @@ export function hasEntry(name: string) {
     return registry.has(name);
 }
 
-export async function findExe(name: string) {
+export async function findExe(name: string | URL) {
+    if (name instanceof URL) {
+        if (name.protocol !== 'file:')
+            throw new Error("Only file URLs are supported");
+        
+        name = name.toString();
+    }
+
     if (isAbsolute(name) && await isFile(name)) {
         return name;
     }

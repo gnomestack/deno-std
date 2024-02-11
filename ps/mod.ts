@@ -1,8 +1,7 @@
 import { NotFoundOnPathError } from "../errors/mod.ts";
 import { Ps, ps, preCallHooks, postCallHooks } from "./ps.ts";
-import { findExe, findExeSync } from "./registry.ts";
-import { splat } from "./splat.ts";
-import { splitArguments } from "./split_arguments.ts";
+import { findExe, findExeSync, registerExe } from "./registry.ts";
+import { splat, splitArguments, normalizeExecArgs } from "./utils.ts";
 import { ExecArgs, IExecOptions, IExecSyncOptions, IPsStartInfo, ISplatOptions, IPipe, IPsOutput, IChildProcess, IPsOutputArgs, IPsPostHook, IPsPreHook } from "./types.ts";
 export * from "./_base.ts";
 export * from "./write_command.ts";
@@ -12,6 +11,8 @@ export {
     NotFoundOnPathError,
     findExe,
     findExeSync,
+    registerExe,
+    normalizeExecArgs,
     splat,
     splitArguments,
     Ps, 
@@ -104,7 +105,7 @@ export function runSync(
  * console.log(o.stdoutText);
  * ```
  */
-export function capture(
+export function quietRun(
     name: string,
     args?: ExecArgs,
     options?: Omit<IExecOptions, "stdout" | "stderr">,
@@ -133,7 +134,7 @@ export function capture(
  * console.log(o.stdoutText);
  * ```
  */
-export function captureSync(
+export function quietRunSync(
     name: string,
     args?: ExecArgs,
     options?: Omit<IExecSyncOptions, "stdout" | "stderr">,

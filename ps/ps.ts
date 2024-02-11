@@ -1,28 +1,23 @@
-import { OptionError, NotFoundOnPathError, ArgumentError, ProcessError } from "../errors/mod.ts";
-import { readLines } from "../io/read-lines.ts";
+import { OptionError, NotFoundOnPathError } from "../errors/mod.ts";
 import {
     ExecArgs,
     IChildProcess,
     IExecOptions,
-    IExecSyncOptions,
     IPipe,
     IPsCommand,
     IPsOutput,
-    IPsOutputArgs,
     IPsPostHook,
     IPsPreHook,
     IPsStartInfo,
-    ISplatOptions,
     Signal,
     StdInput,
     Stdio,
 } from "./types.ts";
-import { findExe, findExeSync } from "./registry.ts";
-import { splat } from "./splat.ts";
-import { splitArguments } from "./split_arguments.ts";
+import { normalizeExecArgs } from "./utils.ts";
 import { PsOutput } from "./ps-output.ts";
 import { createPipeFactory } from "./pipe.ts";
 import { ChildProcess } from "./child-process.ts";
+import { findExe, findExeSync } from "./registry.ts";
 export type { IChildProcess, IPsStartInfo, Signal };
 export { PsOutput };
 
@@ -50,8 +45,20 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
         }
     }
 
+    /**
+     * Thenable method that allows the Ps object to be used as a promise which calls the `output` method.
+     * It is not recommended to use this method directly. Instead, use the `output` method.
+     * 
+     * @example
+     * ```ts
+     * const result = await ps("echo", "hello world", { stdout: 'piped' });
+     * console.log(result.code);
+     * console.log(result.stdoutText);
+     * ```
+     */
     then<TResult1 = IPsOutput, TResult2 = never>(
         onfulfilled?: ((value: IPsOutput) => TResult1 | PromiseLike<TResult1>) | null | undefined, 
+        // deno-lint-ignore no-explicit-any
         onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined): PromiseLike<TResult1 | TResult2> {
         return this.output().then(onfulfilled, onrejected)
     }
@@ -242,6 +249,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `blob()`.
      * 
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @returns a blob object.
      */
     blob() {
@@ -260,7 +268,8 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * 
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `arrayBuffer()`.
-     * 
+     *
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @returns an `ArrayBuffer`.
      */
     arrayBuffer() {
@@ -282,6 +291,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * and stderr streams.
      * 
      * @returns an `ArrayBuffer`.
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @example 
      * ```ts
      * 
@@ -307,6 +317,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * @returns an `IPsOutput` object.
      * @see IPsOutput
      * @see PsOutput
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @example 
      * ```ts
      * const result = await ps("echo", "hello world").quiet();
@@ -323,6 +334,35 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
         return this.output();
     }
 
+    /**
+     * Creates a child process and returns the `IChildProcess` object. The `IChildProcess` object can be used to
+     * interact with the process such as reading and writing to the standard input, output, and error streams.
+     * 
+     * @description
+     * Spawn is a low-level method that is used to create a child process. It is recommended to use the `output` or `outputSync`
+     * or the methods like `text`, `json`, `blob`, `arrayBuffer`, `lines`, or `quiet` to execute the process. You should only use 
+     * methods unless you have direct need to interact with standard input, output, and error streams or need to call `ref` or
+     * `unref` on the process.
+     * 
+     * The method calls `findExeSync` to find the executable on the path. If the executable is not found, then a `NotFoundOnPathError` is thrown.
+     * 
+     * @returns `IChildProcess` object.
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
+     * @example 
+     * ```ts
+     * const child = ps("echo").stdin('piped').stdout('piped').spawn();
+     * child.ref();
+     * const writer = child.stdin.getWriter();
+     * writer.write(new TextEncoder().encode("hello world"));
+     * writer.close();
+     * writer.releaseLock();
+     * const reader = child.stdout.getReader();
+     * const { done, value } = await reader.read();
+     * console.log(new TextDecoder().decode(value));
+     * reader.releaseLock();
+     * child.unref();
+     * ```
+     */
     spawn() {
         if (this.#child) {
             return this.#child;
@@ -334,16 +374,44 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
             });
         }
 
+        const path = findExeSync(this.#startInfo.file);
+        if (!path) {
+            throw new NotFoundOnPathError(path);
+        }
+
         const start = new Date();
-        const cmd = new Deno.Command(this.#startInfo.file, this.#startInfo);
+        const cmd = new Deno.Command(path, this.#startInfo);
         return new ChildProcess(cmd.spawn(), this.#startInfo, pipeFactory, start);
     }
 
+    /**
+     * Executes the process and returns the standard output and error streams as a `Uint8Array` using the `IPsOutput` object which
+     * includes the code and signal of the process.
+     * 
+     * @description
+     * The output method can handle setting data to the stdin stream using the input method or input property on startInfo.
+     * `findExe` is called to find the executable on the path. If the executable is not found, then a `NotFoundOnPathError` is thrown.
+     * 
+     * @returns a promise that resolves to a `PsOutput` object.
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
+     * @example
+     * ```ts
+     * const result = ps("echo", "hello world").stdout('piped').outputSync();
+     * console.log(result.code);
+     * console.log(result.stdoutText);
+     * ```
+     */
     async output() {
+       
         if (preCallHooks.length > 0) {
             preCallHooks.forEach((hook) => {
                 hook(this.#startInfo);
             });
+        }
+
+        const path = await findExe(this.#startInfo.file);
+        if (!path) {
+            throw new NotFoundOnPathError(path);
         }
 
         if (!this.#startInfo.input) {
@@ -446,18 +514,43 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
         return psOutput;
     }
 
+    /**
+     * Executes the process and returns the standard output and error streams as a `Uint8Array` using the `IPsOutput` object which
+     * includes the code and signal of the process.
+     * 
+     * @description
+     * The output method can **not** handle setting data to the stdin stream using the input method or input property on startInfo. This
+     * limitation exists because the stdin uses is a WriteableStream which only works in an async context. 
+     * `findExeSync` is called to find the executable on the path. If the executable is not found, then a `NotFoundOnPathError` is thrown.
+     * 
+     * @returns a `PsOutput` object.
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
+     * @example
+     * ```ts
+     * const result = ps("echo", "hello world", { stdout: 'piped' }).outputSync();
+     * console.log(result.code);
+     * console.log(result.stdoutText);
+     * ```
+     */
     outputSync() {
+       
+
         if (preCallHooks.length > 0) {
             preCallHooks.forEach((hook) => {
                 hook(this.#startInfo);
             });
         }
 
-        const cmd = new Deno.Command(this.#startInfo.file, this.#startInfo);
+        const path = findExeSync(this.#startInfo.file);
+        if (!path) {
+            throw new NotFoundOnPathError(path);
+        }
+
+        const cmd = new Deno.Command(path, this.#startInfo);
         const result = cmd.outputSync();
         const date = new Date();
         const output = new PsOutput({
-            file: this.#startInfo.file,
+            file: path,
             args: this.#startInfo.args,
             stdout: this.#startInfo.stdout === "piped" ? result.stdout : new Uint8Array(),
             stderr: this.#startInfo.stderr === "piped" ? result.stderr : new Uint8Array(),
@@ -476,40 +569,24 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     }
 }
 
-export function normalizeExecArgs(
-    args?: ExecArgs,
-    splatOptions?: ISplatOptions,
-): string[] | undefined {
-    if (!args) {
-        return undefined;
-    }
-
-    if (Array.isArray(args)) {
-        return args;
-    }
-
-    if (typeof args === "string") {
-        return splitArguments(args);
-    }
-
-    return splat(args, splatOptions);
-}
-
+/**
+ * Creates a new `Ps` object and returns it. The `Ps` object can be used to run an executable and interact with the standard input, output, and error streams.
+ * 
+ * @description
+ * The function is a convenience function that creates a new `Ps` object and defaults the streams to 'inherit' if they are not set as
+ * part of the options. The `normalizeExecArgs` is called to convert the args to a `string[]` if they are not already an array.
+ * 
+ * @param name The file name or name of the executable to run.
+ * @param args The arguments to pass to the executable. Can be `string[]`, `string`, or `Record<string, unknown>`.
+ * @param options The options to use when running the executable such as setting the cwd or env variables.
+ * @returns a new `Ps` object.
+ */
 export function ps(name: string | URL, args?: ExecArgs, options?: IExecOptions) {
-    if (name instanceof URL) {
-        name = name.toString();
-    }
-
-    const path = findExeSync(name);
-    if (!path) {
-        throw new NotFoundOnPathError(name);
-    }
-
     const a = normalizeExecArgs(args, options?.splat);
 
     const si: IPsStartInfo = {
         ...options,
-        file: path,
+        file: name,
         args: a,
     };
 
