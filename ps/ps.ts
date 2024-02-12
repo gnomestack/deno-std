@@ -1,4 +1,4 @@
-import { OptionError, NotFoundOnPathError } from "../errors/mod.ts";
+import { NotFoundOnPathError, OptionError } from "../errors/mod.ts";
 import {
     ExecArgs,
     IChildProcess,
@@ -21,16 +21,15 @@ import { findExe, findExeSync } from "./registry.ts";
 export type { IChildProcess, IPsStartInfo, Signal };
 export { PsOutput };
 
-
 export const preCallHooks: IPsPreHook[] = [];
 export const postCallHooks: IPsPostHook[] = [];
 
-export type OutputKind = "text" | "buffer" | "lines" | 'default' | 'json';
+export type OutputKind = "text" | "buffer" | "lines" | "default" | "json";
 
-export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
+export class Ps implements IPsCommand, PromiseLike<IPsOutput> {
     #startInfo: IPsStartInfo;
     #child?: IChildProcess;
-    #kind: OutputKind = 'default';
+    #kind: OutputKind = "default";
     #validate?: (code: number) => boolean;
 
     constructor(startInfo?: IPsStartInfo) {
@@ -52,7 +51,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Thenable method that allows the Ps object to be used as a promise which calls the `output` method.
      * It is not recommended to use this method directly. Instead, use the `output` method.
-     * 
+     *
      * @example
      * ```ts
      * const result = await ps("echo", "hello world", { stdout: 'piped' });
@@ -61,10 +60,11 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * ```
      */
     then<TResult1 = IPsOutput, TResult2 = never>(
-        onfulfilled?: ((value: IPsOutput) => TResult1 | PromiseLike<TResult1>) | null | undefined, 
+        onfulfilled?: ((value: IPsOutput) => TResult1 | PromiseLike<TResult1>) | null | undefined,
         // deno-lint-ignore no-explicit-any
-        onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined): PromiseLike<TResult1 | TResult2> {
-        return this.output().then(onfulfilled, onrejected)
+        onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined,
+    ): PromiseLike<TResult1 | TResult2> {
+        return this.output().then(onfulfilled, onrejected);
     }
 
     /**
@@ -100,7 +100,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * @param cwd The current working directory for the executable.
      * @returns self.
      */
-    cwd(cwd: string  | undefined) {
+    cwd(cwd: string | undefined) {
         this.#startInfo.cwd = cwd;
         return this;
     }
@@ -128,7 +128,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
 
     /**
      * Sets the Stdio modifier for standard input stream. e.g. 'inherit', 'piped', or 'null'.
-     * @param stdin The Stdio type to use. 
+     * @param stdin The Stdio type to use.
      * @returns self
      */
     stdin(stdin: Stdio) {
@@ -158,27 +158,27 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
 
     /**
      * Pipes the output of the current process to another process. This is similar
-     * to the `|` operator in Unix or the `|` operator in PowerShell. 
+     * to the `|` operator in Unix or the `|` operator in PowerShell.
      * @param name The filename of the executable to run.
      * @param args The arguments to pass to the executable. Can be `string[]`, `string`, or `Record<string, unknown>`.
      * @param options The options to use when running the executable such as setting the cwd or env variables.
-     * @example 
+     * @example
      * ```ts
      *  const result = await ps("echo", "my test")
      *      .pipe("grep", "test")
      *      .pipe("cat")
      *      .output();
-     * 
+     *
      * ```
      */
-    pipe(name: string, args?: ExecArgs, options?: Omit<IExecOptions, 'stdin' | 'stdout' | 'stderr'>): IPipe;
+    pipe(name: string, args?: ExecArgs, options?: Omit<IExecOptions, "stdin" | "stdout" | "stderr">): IPipe;
     /**
      * Pipes the output of the current process to another process. This is similar
      * to the `|` operator in Unix or the `|` operator in PowerShell.
-     * @param name 
-     * @param args 
-     * @param options 
-     * @example 
+     * @param name
+     * @param args
+     * @param options
+     * @example
      * ```ts
      *  const result = await ps("echo", "my test")
      *      .pipe(ps("grep", "test"))
@@ -211,18 +211,19 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Executes and returns the standard output stream as a string. The standard error stream is ignored.
      * If input is set, then the standard input stream is piped.
-     * 
+     *
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `text()`.
-     * 
+     *
      * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @returns the standard output stream as a string.
      */
     text() {
         this.#startInfo.stdout = "piped";
-        this.#startInfo.stderr = 'null';
-        if (this.#startInfo.input !== undefined)
+        this.#startInfo.stderr = "null";
+        if (this.#startInfo.input !== undefined) {
             this.#startInfo.stdin = "piped";
+        }
 
         const spawn = this.spawn();
         return spawn.text();
@@ -231,7 +232,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Executes and returns the standard output stream as a JSON object. The standard error stream is ignored.
      * If input is set, then the standard input stream is piped.
-     * 
+     *
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `json()`.
      *
@@ -240,9 +241,10 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      */
     json() {
         this.#startInfo.stdout = "piped";
-        this.#startInfo.stderr = 'null';
-        if (this.#startInfo.input !== undefined)
+        this.#startInfo.stderr = "null";
+        if (this.#startInfo.input !== undefined) {
             this.#startInfo.stdin = "piped";
+        }
 
         const spawn = this.spawn();
         return spawn.json();
@@ -251,18 +253,19 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Executes and returns the standard output stream as a `Uint8Array`. The standard error stream is ignored.
      * If input is set, then the standard input stream is piped.
-     * 
+     *
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `blob()`.
-     * 
+     *
      * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @returns a blob object.
      */
     blob() {
         this.#startInfo.stdout = "piped";
-        this.#startInfo.stderr = 'null';
-        if (this.#startInfo.input !== undefined)
+        this.#startInfo.stderr = "null";
+        if (this.#startInfo.input !== undefined) {
             this.#startInfo.stdin = "piped";
+        }
 
         const spawn = this.spawn();
         return spawn.blob();
@@ -271,7 +274,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Executes and returns the standard output stream as a `ArrayBuffer`. The standard error stream is ignored.
      * If input is set, then the standard input stream is piped.
-     * 
+     *
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `arrayBuffer()`.
      *
@@ -280,36 +283,38 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      */
     arrayBuffer() {
         this.#startInfo.stdout = "piped";
-        this.#startInfo.stderr = 'null';
-        if (this.#startInfo.input !== undefined)
+        this.#startInfo.stderr = "null";
+        if (this.#startInfo.input !== undefined) {
             this.#startInfo.stdin = "piped";
+        }
 
         const spawn = this.spawn();
         return spawn.arrayBuffer();
     }
 
-     /**
+    /**
      * Executes and returns the standard output stream as a `AsyncIterator<string>`. The standard error stream is ignored.
      * If input is set, then the standard input stream is piped.
-     * 
+     *
      * @description
      * This is a convenience method that calls `tryReadLines` on the standard output stream and handles cleanup of the stdin
      * and stderr streams.
-     * 
+     *
      * @returns an `ArrayBuffer`.
      * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
-     * @example 
+     * @example
      * ```ts
-     * 
+     *
      * for await (const line of ps("echo", "hello world").lines()) {
      *    console.log(line);
      * }
      */
     lines() {
         this.#startInfo.stdout = "piped";
-        this.#startInfo.stderr = 'null';
-        if (this.#startInfo.input !== undefined)
+        this.#startInfo.stderr = "null";
+        if (this.#startInfo.input !== undefined) {
             this.#startInfo.stdin = "piped";
+        }
 
         const spawn = this.spawn();
         return spawn.lines();
@@ -319,12 +324,12 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * Executes and returns the standard output and error streams as a `Uint8Array` using the `IPsOutput` object which
      * includes the code and signal of the process. The method automatically sets the `stdout` and `stderr` to `piped`.
      * If input is set, then the standard input stream is piped.
-     * 
+     *
      * @returns an `IPsOutput` object.
      * @see IPsOutput
      * @see PsOutput
      * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
-     * @example 
+     * @example
      * ```ts
      * const result = await ps("echo", "hello world").quiet();
      * console.log(result.code);
@@ -332,10 +337,11 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * ```
      */
     quiet() {
-        this.#startInfo.stdout = 'piped'
-        this.#startInfo.stderr = 'piped';
-        if (this.#startInfo.input !== undefined)
+        this.#startInfo.stdout = "piped";
+        this.#startInfo.stderr = "piped";
+        if (this.#startInfo.input !== undefined) {
             this.#startInfo.stdin = "piped";
+        }
 
         return this.output();
     }
@@ -343,18 +349,18 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Creates a child process and returns the `IChildProcess` object. The `IChildProcess` object can be used to
      * interact with the process such as reading and writing to the standard input, output, and error streams.
-     * 
+     *
      * @description
      * Spawn is a low-level method that is used to create a child process. It is recommended to use the `output` or `outputSync`
-     * or the methods like `text`, `json`, `blob`, `arrayBuffer`, `lines`, or `quiet` to execute the process. You should only use 
+     * or the methods like `text`, `json`, `blob`, `arrayBuffer`, `lines`, or `quiet` to execute the process. You should only use
      * methods unless you have direct need to interact with standard input, output, and error streams or need to call `ref` or
      * `unref` on the process.
-     * 
+     *
      * The method calls `findExeSync` to find the executable on the path. If the executable is not found, then a `NotFoundOnPathError` is thrown.
-     * 
+     *
      * @returns `IChildProcess` object.
      * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
-     * @example 
+     * @example
      * ```ts
      * const child = ps("echo").stdin('piped').stdout('piped').spawn();
      * child.ref();
@@ -393,11 +399,11 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Executes the process and returns the standard output and error streams as a `Uint8Array` using the `IPsOutput` object which
      * includes the code and signal of the process.
-     * 
+     *
      * @description
      * The output method can handle setting data to the stdin stream using the input method or input property on startInfo.
      * `findExe` is called to find the executable on the path. If the executable is not found, then a `NotFoundOnPathError` is thrown.
-     * 
+     *
      * @returns a promise that resolves to a `PsOutput` object.
      * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @example
@@ -408,7 +414,6 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * ```
      */
     async output() {
-       
         if (preCallHooks.length > 0) {
             preCallHooks.forEach((hook) => {
                 hook(this.#startInfo);
@@ -450,7 +455,6 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
         const start = new Date();
         const child = cmd.spawn();
         if (this.#startInfo.input && !child.stdin.locked) {
-
             // the following must be done in order:
             // close the writer, release the lock, close the stream.
             // if you call output, then don't call stream.close
@@ -490,13 +494,11 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
                 const writer = child.stdin.getWriter();
                 await writer.write(new TextEncoder().encode(input));
 
-        
                 await writer.close();
                 writer.releaseLock();
             }
         }
-    
-  
+
         const output = await child.output();
         await child.status;
         const psOutput = new PsOutput({
@@ -509,7 +511,6 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
             start: start,
             end: new Date(),
         });
-        
 
         if (postCallHooks.length > 0) {
             postCallHooks.forEach((hook) => {
@@ -523,12 +524,12 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
     /**
      * Executes the process and returns the standard output and error streams as a `Uint8Array` using the `IPsOutput` object which
      * includes the code and signal of the process.
-     * 
+     *
      * @description
      * The output method can **not** handle setting data to the stdin stream using the input method or input property on startInfo. This
-     * limitation exists because the stdin uses is a WriteableStream which only works in an async context. 
+     * limitation exists because the stdin uses is a WriteableStream which only works in an async context.
      * `findExeSync` is called to find the executable on the path. If the executable is not found, then a `NotFoundOnPathError` is thrown.
-     * 
+     *
      * @returns a `PsOutput` object.
      * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @example
@@ -539,8 +540,6 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * ```
      */
     outputSync() {
-       
-
         if (preCallHooks.length > 0) {
             preCallHooks.forEach((hook) => {
                 hook(this.#startInfo);
@@ -577,11 +576,11 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
 
 /**
  * Creates a new `Ps` object and returns it. The `Ps` object can be used to run an executable and interact with the standard input, output, and error streams.
- * 
+ *
  * @description
  * The function is a convenience function that creates a new `Ps` object and defaults the streams to 'inherit' if they are not set as
  * part of the options. The `normalizeExecArgs` is called to convert the args to a `string[]` if they are not already an array.
- * 
+ *
  * @param name The file name or name of the executable to run.
  * @param args The arguments to pass to the executable. Can be `string[]`, `string`, or `Record<string, unknown>`.
  * @param options The options to use when running the executable such as setting the cwd or env variables.
@@ -597,15 +596,15 @@ export function ps(name: string | URL, args?: ExecArgs, options?: IExecOptions) 
     };
 
     if (si.stdout === undefined) {
-        si.stdout = 'inherit';
+        si.stdout = "inherit";
     }
 
     if (si.stderr === undefined) {
-        si.stderr = 'inherit';
+        si.stderr = "inherit";
     }
 
     if (options?.input || si.stdin === undefined) {
-        si.stdin = 'inherit';
+        si.stdin = "inherit";
     }
 
     return new Ps(si);

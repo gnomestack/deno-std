@@ -70,9 +70,10 @@ export function registerExe(
 
 export function findExeSync(name: string | URL) {
     if (name instanceof URL) {
-        if (name.protocol !== 'file:')
+        if (name.protocol !== "file:") {
             throw new Error("Only file URLs are supported");
-        
+        }
+
         name = name.toString();
     }
 
@@ -176,9 +177,10 @@ export function hasEntry(name: string) {
 
 export async function findExe(name: string | URL) {
     if (name instanceof URL) {
-        if (name.protocol !== 'file:')
+        if (name.protocol !== "file:") {
             throw new Error("Only file URLs are supported");
-        
+        }
+
         name = name.toString();
     }
 

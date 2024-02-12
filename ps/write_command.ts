@@ -10,7 +10,7 @@ export const writeCommandOptions = {
 /**
  * Write a command to the console and mask any secrets registered with the
  * secret masker.
- * @param fileName The name of the file to run. 
+ * @param fileName The name of the file to run.
  * @param args The arguments to pass to the file.
  * @returns void
  */
@@ -22,7 +22,7 @@ export function writeCommand(fileName: string, args: string[]) {
     }
 
     const masker = writeCommandOptions.masker;
-    const joined = args.map(o => {
+    const joined = args.map((o) => {
         if (o.includes(" ")) {
             return `"${o}"`;
         }

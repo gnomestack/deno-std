@@ -312,11 +312,13 @@ export function fail<T = void, E = Error>(value: E): Result<T, E> {
 
 // deno-lint-ignore no-explicit-any
 export function fromError<T = void>(e?: any): Result<T, Error> {
-    if (e instanceof Error)
+    if (e instanceof Error) {
         return new Result<T, Error>(undefined, e, ERR);
+    }
 
-    if (typeof e === "string")
+    if (typeof e === "string") {
         return new Result<T, Error>(undefined, new Error(e), ERR);
+    }
 
     return new Result<T, Error>(undefined, new Error(`Unknown Error ${e}`), ERR);
 }

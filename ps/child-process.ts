@@ -64,15 +64,14 @@ export class ChildProcess implements IChildProcess {
         this.#closed = true;
 
         const setup = async () => {
-            if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked)
-            {
+            if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked) {
                 await pipeInput(this.si.input, this);
                 await this.process.stdin.close();
-            } else if(this.si.stdin === "piped" && !this.process.stdin.locked) {
+            } else if (this.si.stdin === "piped" && !this.process.stdin.locked) {
                 await this.process.stdin.close();
             }
 
-            if (this.si.stderr === 'piped') {
+            if (this.si.stderr === "piped") {
                 await this.process.stderr.cancel();
             }
         };
@@ -96,17 +95,16 @@ export class ChildProcess implements IChildProcess {
         }
 
         this.#closed = true;
-        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked)
-        {
+        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked) {
             await pipeInput(this.si.input, this);
             await this.process.stdin.close();
-        } else if(this.si.stdin === "piped" && !this.process.stdin.locked) {
+        } else if (this.si.stdin === "piped" && !this.process.stdin.locked) {
             await this.process.stdin.close();
         }
 
         const rsp = new Response(this.process.stdout);
         const json = await rsp.json();
-        if (this.si.stderr === 'piped') {
+        if (this.si.stderr === "piped") {
             await this.process.stderr.cancel();
         }
 
@@ -124,17 +122,16 @@ export class ChildProcess implements IChildProcess {
         }
 
         this.#closed = true;
-        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked)
-        {
+        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked) {
             await pipeInput(this.si.input, this);
             await this.process.stdin.close();
-        } else if(this.si.stdin === "piped" && !this.process.stdin.locked) {
+        } else if (this.si.stdin === "piped" && !this.process.stdin.locked) {
             await this.process.stdin.close();
         }
 
         const rsp = new Response(this.process.stdout);
         const blob = await rsp.blob();
-        if (this.si.stderr === 'piped') {
+        if (this.si.stderr === "piped") {
             await this.process.stderr.cancel();
         }
 
@@ -152,17 +149,16 @@ export class ChildProcess implements IChildProcess {
         }
 
         this.#closed = true;
-        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked)
-        {
+        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked) {
             await pipeInput(this.si.input, this);
             await this.process.stdin.close();
-        } else if(this.si.stdin === "piped" && !this.process.stdin.locked) {
+        } else if (this.si.stdin === "piped" && !this.process.stdin.locked) {
             await this.process.stdin.close();
         }
 
         const rsp = new Response(this.process.stdout);
         const buffer = await rsp.arrayBuffer();
-        if (this.si.stderr === 'piped') {
+        if (this.si.stderr === "piped") {
             await this.process.stderr.cancel();
         }
 
@@ -180,17 +176,16 @@ export class ChildProcess implements IChildProcess {
         }
 
         this.#closed = true;
-        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked)
-        {
+        if (this.si.input && this.si.stdin === "piped" && !this.process.stdin.locked) {
             await pipeInput(this.si.input, this.process);
             await this.process.stdin.close();
-        } else if(this.si.stdin === "piped" && !this.process.stdin.locked) {
+        } else if (this.si.stdin === "piped" && !this.process.stdin.locked) {
             await this.process.stdin.close();
         }
 
         const rsp = new Response(this.process.stdout);
         const text = await rsp.text();
-        if (this.si.stderr === 'piped') {
+        if (this.si.stderr === "piped") {
             await this.process.stderr.cancel();
         }
 

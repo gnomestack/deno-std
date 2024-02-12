@@ -19,8 +19,9 @@ export class Option<T> {
     }
 
     get value(): T | undefined {
-        if (this.#symbol === NONE)
+        if (this.#symbol === NONE) {
             throw new OptionError("Option is None");
+        }
 
         return this.#value;
     }
@@ -112,7 +113,7 @@ export class Option<T> {
         return some(this.#value!);
     }
 
-    when(predicate: ((value: T) => boolean), fn: (value: T) => T): Option<T> {
+    when(predicate: (value: T) => boolean, fn: (value: T) => T): Option<T> {
         if (this.#symbol === NONE) {
             return this;
         }
@@ -123,7 +124,6 @@ export class Option<T> {
 
         return this;
     }
-
 
     if(predicate: (value: T) => boolean): boolean {
         if (this.#symbol === NONE) {

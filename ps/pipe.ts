@@ -1,6 +1,14 @@
 import { ArgumentError, ProcessError } from "../errors/mod.ts";
-import { ExecArgs, IChildProcess, IExecOptions, IPipe, IPipeFactory, IPsCommand, IPsOutput, PsFactory } from "./types.ts";
-
+import {
+    ExecArgs,
+    IChildProcess,
+    IExecOptions,
+    IPipe,
+    IPipeFactory,
+    IPsCommand,
+    IPsOutput,
+    PsFactory,
+} from "./types.ts";
 
 export class Pipe implements IPipe {
     #promise: Promise<IChildProcess>;
@@ -31,26 +39,23 @@ export class Pipe implements IPipe {
         this.#promise = this.#promise.then(async (process) => {
             let child = next as IChildProcess;
             if (typeof next === "object" && "spawn" in next) {
-                if ('stdin' in next) {
+                if ("stdin" in next) {
                     next.stdin("piped");
                 }
                 child = next.spawn();
             }
 
             try {
-                
-
                 // force stdin to close
                 await process.stdout.pipeTo(child.stdin, { preventClose: false });
-                if (!process.stdout.locked)
-                {
-                    console.log("stdout", 'cancelled');
+                if (!process.stdout.locked) {
+                    console.log("stdout", "cancelled");
                     await process.stdout.cancel();
                 }
-                    
+
                 // if (process.stderr.)
                 //await process.stderr.cancel();
-            
+
                 const status = await process.status;
                 if (status.success) {
                     console.log("status success");

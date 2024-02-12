@@ -2,7 +2,7 @@ import { chmod, chmodSync, makeTempFile, makeTempFileSync, writeTextFile, writeT
 import { IS_WINDOWS } from "../os/mod.ts";
 import { resolve } from "../path/mod.ts";
 import { cwd } from "../ps/mod.ts";
-import { IPathFinderOptions, findExe, findExeSync, registerExe } from "../ps/registry.ts";
+import { findExe, findExeSync, IPathFinderOptions, registerExe } from "../ps/registry.ts";
 
 export function generateScriptFileSync(script: string, ext: string) {
     const scriptFile = makeTempFileSync({ prefix: "quasar_scripts", suffix: ext });
@@ -68,7 +68,7 @@ registerShell("cmd", {
     ],
     wrap: (script: string) => {
         return `@echo off
-${script}`;  
+${script}`;
     },
 });
 
@@ -157,8 +157,6 @@ registerShell("python", {
     ],
 });
 
-
-
 registerShell("ruby", {
     args: [],
     ext: ".rb",
@@ -202,7 +200,7 @@ registerShell("powershell", {
         ${script}
         if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }
 `;
-    }
+    },
 });
 
 registerShell("pwsh", {
@@ -227,4 +225,3 @@ registerShell("pwsh", {
     mapPath: (path: string) => Promise.resolve(`. ${resolve(cwd(), path)}`),
     mapPathSync: (path: string) => `. ${resolve(cwd(), path)}`,
 });
-

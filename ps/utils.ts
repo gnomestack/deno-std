@@ -9,18 +9,18 @@ const match = (array: unknown[], value: string) =>
 
 /**
  * Converts an object to an `string[]` of command line arguments.
- * 
+ *
  * @description
  * This is a modified version of the dargs npm package.  Its useful for converting an object to an array of command line arguments
  * especially when using typescript interfaces to provide intellisense and type checking for command line arguments
  * for an executable or commands in an executable.
- * 
+ *
  * The code https://github.com/sindresorhus/dargs which is under under MIT License.
  * The original code is Copyrighted under (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
  * @param object The object to convert
  * @param options The options to use
  * @returns An array of command line arguments
- * @example 
+ * @example
  * ```ts
  * const args = splat({ foo: "bar" });
  * console.log(args); // ["--foo", "bar"]
@@ -192,19 +192,19 @@ export function splat(
  * arguments that are quoted, arguments that are separated by spaces, and multiline
  * strings that include a backslash (\\) or backtick (`) at the end of the line for cases
  * where the string uses bash or powershell multi line arguments.
- * @param value 
+ * @param value
  * @returns a `string[]` of arguments.
  * @example
  * ```ts
  * const args0 = splitArguments("hello world");
  * console.log(args0); // ["hello", "world"]
- * 
+ *
  * const args1 = splitArguments("hello 'dog world'");
  * console.log(args1); // ["hello", "dog world"]
- * 
+ *
  * const args2 = splitArguments("hello \"cat world\"");
  * console.log(args2); // ["hello", "cat world"]
- * 
+ *
  * const myArgs = `--hello \
  * "world"`
  * const args3 = splitArguments(myArgs);
@@ -305,7 +305,6 @@ export function splitArguments(value: string): string[] {
     return tokens;
 }
 
-
 /**
  * Normalizes arguments of the `ExecArgs` type which is 'string' | 'string[]' | Record<string, unknown> and converts
  * the arguments into an array which is what Deno, Node.js and other runtimes expect for executing a child process.
@@ -338,9 +337,9 @@ export function normalizeExecArgs(
  * Pipes input to a child process. The input can be a `string`, `Uint8Array`, or a `ReadableStream<Uint8Array>`.
  * If the input object is a `IChildProcess`, `Deno.ChildProcess` or `PsObject` object with a property called `stdout`
  * it will determine stdout is a `Uint8Array` or a `ReadableStream<Uint8Array>` and pipe the input to the child process.
- * 
+ *
  * The method is not meant to be called directly.  It is used internally by the `Ps` class and the `ChildProcess` class.
- * 
+ *
  * @param input The input data.
  * @param child The child process.
  * @param throwOnError If true, throws an error if the input is invalid.
@@ -348,7 +347,7 @@ export function normalizeExecArgs(
  */
 export async function pipeInput(input: StdInput, child: IChildProcess | Deno.ChildProcess, throwOnError?: boolean) {
     if (input && !child.stdin.locked) {
-        if (typeof input === 'object' && 'stdout' in input) {
+        if (typeof input === "object" && "stdout" in input) {
             const stdout = input.stdout;
             if (stdout instanceof Uint8Array) {
                 input = input.stdout;

@@ -140,7 +140,7 @@ export interface ICommandOutput {
  */
 export type Stdio = "inherit" | "piped" | "null";
 
-export type StdInput = string | ReadableStream<Uint8Array> | Uint8Array | IPsOutput
+export type StdInput = string | ReadableStream<Uint8Array> | Uint8Array | IPsOutput;
 
 export interface ICommandOptions {
     /**
@@ -213,7 +213,7 @@ export interface PsFactory {
 }
 
 export interface IPipeFactory {
-    create(process: IChildProcess) : IPipe
+    create(process: IChildProcess): IPipe;
 }
 
 export interface IPsStartInfo extends ICommandOptions {
@@ -445,7 +445,6 @@ export interface IExecOptions extends IExecSyncOptions {
 }
 
 export type ExecArgs = string | string[] | Record<string, unknown>;
-
 
 export interface IPsPreHook {
     (si: IPsStartInfo): void;

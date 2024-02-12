@@ -96,7 +96,7 @@ function when() {
         }
 
         default:
-            throw new ArgumentRangeError('arguments', `Invalid number of arguments ${arguments.length}`);
+            throw new ArgumentRangeError("arguments", `Invalid number of arguments ${arguments.length}`);
     }
 }
 

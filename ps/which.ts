@@ -1,14 +1,6 @@
 import * as env from "../os/env.ts";
 import { basename, basenameWithoutExtension, isAbsolute, join, resolve } from "../path/mod.ts";
-import {
-    IDirectoryInfo,
-    isDir,
-    isDirSync,
-    isFile,
-    isFileSync,
-    readDir,
-    readDirSync,
-} from "../fs/mod.ts";
+import { IDirectoryInfo, isDir, isDirSync, isFile, isFileSync, readDir, readDirSync } from "../fs/mod.ts";
 import { IS_WINDOWS as isWindows } from "../os/constants.ts";
 import { isNullOrEmpty, isNullOrWhiteSpace } from "../primitives/str.ts";
 import { notNull, notNullOrWhiteSpace } from "../check/mod.ts";

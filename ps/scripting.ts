@@ -1,19 +1,19 @@
 import {
-    quietRun,
-    quietRunSync,
     chdir,
     cwd,
-    run,
     ExecArgs,
-    runSync,
     exit,
     IExecOptions,
     IExecSyncOptions,
+    IPsOutput,
     isatty,
     ISplatOptions,
     Ps,
     ps as create,
-    IPsOutput,
+    quietRun,
+    quietRunSync,
+    run,
+    runSync,
     splat,
     stderr,
     stdin,
@@ -88,20 +88,25 @@ export interface IProcess {
     whichSync(exec: string): string | undefined;
 }
 
-const defaultCwd = (function(){ try { return cwd() } catch { return "" } })();
+const defaultCwd = (function () {
+    try {
+        return cwd();
+    } catch {
+        return "";
+    }
+})();
 const cwdHistory: string[] = [];
 
-let a : string[] = [];
+let a: string[] = [];
 try {
-    if (Deno.permissions.querySync({ name: 'read' }).state === 'granted') {
+    if (Deno.permissions.querySync({ name: "read" }).state === "granted") {
         cwdHistory.push(cwd());
         a = Deno.args;
     }
-}  catch(e) {
+} catch (e) {
     console.log(e);
     // do nothing
 }
-
 
 export const ps: IProcess = {
     args: a,

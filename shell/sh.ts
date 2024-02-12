@@ -1,8 +1,7 @@
 import { extname } from "https://deno.land/std@0.208.0/path/extname.ts";
-import { IExecOptions, IPsOutput, IPsStartInfo, Ps, findExeSync } from "../ps/mod.ts";
+import { findExeSync, IExecOptions, IPsOutput, IPsStartInfo, Ps } from "../ps/mod.ts";
 import { IS_WINDOWS } from "../os/constants.ts";
-import { options, generateScriptFile, generateScriptFileSync, list } from "./sh_registry.ts";
-
+import { generateScriptFile, generateScriptFileSync, list, options } from "./sh_registry.ts";
 
 let defaultShell = IS_WINDOWS ? "powershell" : "bash";
 
@@ -14,32 +13,31 @@ export function getDefaultShell() {
     return defaultShell;
 }
 
-
-export class Sh extends Ps 
-{
+export class Sh extends Ps {
     #inlineScript?: string;
     #scriptFile?: string;
     #shell?: string;
     #isTempFile = false;
     #mapped = false;
 
-
     constructor(startInfo?: IPsStartInfo) {
         super(startInfo);
 
         if (startInfo?.file) {
             const exe = startInfo.file.toString();
-            if (exe.includes('/')) {
-                const lastIndex = exe.lastIndexOf('/');
-                if (lastIndex > 0)
+            if (exe.includes("/")) {
+                const lastIndex = exe.lastIndexOf("/");
+                if (lastIndex > 0) {
                     this.#shell = exe.substring(lastIndex + 1);
-            } else if (exe.includes('\\')) {
-                const lastIndex = exe.lastIndexOf('\\');
-                if (lastIndex > 0)
+                }
+            } else if (exe.includes("\\")) {
+                const lastIndex = exe.lastIndexOf("\\");
+                if (lastIndex > 0) {
                     this.#shell = exe.substring(lastIndex + 1);
+                }
             } else {
                 this.#shell = exe;
-            }            
+            }
 
             if (extname(exe) === "") {
                 this.#shell = exe;
@@ -162,8 +160,9 @@ export class Sh extends Ps
     }
 
     private mapSync() {
-        if (this.#mapped)
-        return;
+        if (this.#mapped) {
+            return;
+        }
 
         this.#mapped = true;
 
@@ -181,7 +180,7 @@ export class Sh extends Ps
         }
 
         this.startInfo.file = this.#shell;
-    
+
         if (this.#inlineScript) {
             if (o.wrap) {
                 this.#inlineScript = o.wrap(this.#inlineScript);
@@ -210,16 +209,18 @@ export class Sh extends Ps
 
         const splat = o.args?.concat([]) ?? [];
         let cmd = this.#scriptFile!;
-        if (o.mapPathSync)
+        if (o.mapPathSync) {
             cmd = o.mapPathSync(cmd);
-        
+        }
+
         splat.push(cmd);
         this.args(splat);
     }
 
     private async map() {
-        if (this.#mapped)
+        if (this.#mapped) {
             return;
+        }
 
         this.#mapped = true;
 
@@ -237,7 +238,7 @@ export class Sh extends Ps
         }
 
         this.startInfo.file = this.#shell;
-       
+
         if (this.#inlineScript) {
             if (o.wrap) {
                 this.#inlineScript = o.wrap(this.#inlineScript);
@@ -250,7 +251,7 @@ export class Sh extends Ps
                 const splat = o.args?.concat([]) ?? [];
                 let cmd = this.#scriptFile;
                 if (o.mapPath) {
-                   cmd = await o.mapPath(this.#scriptFile);
+                    cmd = await o.mapPath(this.#scriptFile);
                 }
 
                 splat.push(cmd);
@@ -266,19 +267,20 @@ export class Sh extends Ps
 
         const splat = o.args?.concat([]) ?? [];
         let cmd = this.#scriptFile!;
-        if (o.mapPath)
+        if (o.mapPath) {
             cmd = await o.mapPath(cmd);
-        
+        }
+
         splat.push(cmd);
         this.args(splat);
     }
 }
 
-export function run(shell: string, script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh 
-export function run(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh
+export function run(shell: string, script: string, execOptions?: IExecOptions & { args?: string[] }): Sh;
+export function run(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh;
 export function run() {
     const args = Array.from(arguments);
-    let shell = "notset"
+    let shell = "notset";
     let inlineScript = "";
     let execOptions: IExecOptions | undefined = undefined;
     const arg0 = args[0];
@@ -313,10 +315,10 @@ export function run() {
         shell = getDefaultShell();
     }
 
-    const o : IPsStartInfo = {
+    const o: IPsStartInfo = {
         ...execOptions,
-        file: shell
-    }
+        file: shell,
+    };
 
     const sh = new Sh(o);
 
@@ -325,11 +327,11 @@ export function run() {
     return sh;
 }
 
-export function runSync(shell: string, script: string, execOptions?: IExecOptions & { args?: string[] }) : IPsOutput 
-export function runSync(script: string, execOptions?: IExecOptions & { args?: string[] }) : IPsOutput
+export function runSync(shell: string, script: string, execOptions?: IExecOptions & { args?: string[] }): IPsOutput;
+export function runSync(script: string, execOptions?: IExecOptions & { args?: string[] }): IPsOutput;
 export function runSync() {
     const args = Array.from(arguments);
-    let shell = "notset"
+    let shell = "notset";
     let inlineScript = "";
     let execOptions: IExecOptions | undefined = undefined;
     const arg0 = args[0];
@@ -364,10 +366,10 @@ export function runSync() {
         shell = getDefaultShell();
     }
 
-    const o : IPsStartInfo = {
+    const o: IPsStartInfo = {
         ...execOptions,
-        file: shell
-    }
+        file: shell,
+    };
 
     const sh = new Sh(o);
 
@@ -376,13 +378,11 @@ export function runSync() {
     return sh.outputSync();
 }
 
-
-
-export function exec(shell: string, file: string, execOptions?: IExecOptions & { args?: string[] }) : Ps 
-export function exec(file: string, execOptions?: IExecOptions & { args?: string[] }) : Ps
-export function exec() : Ps  {
+export function exec(shell: string, file: string, execOptions?: IExecOptions & { args?: string[] }): Ps;
+export function exec(file: string, execOptions?: IExecOptions & { args?: string[] }): Ps;
+export function exec(): Ps {
     const args = Array.from(arguments);
-    let shell = "notset"
+    let shell = "notset";
     let file = "";
     let execOptions: IExecOptions & { args?: string[] } | undefined = undefined;
     const arg0 = args[0];
@@ -428,10 +428,10 @@ export function exec() : Ps  {
         }
     }
 
-    const o : IPsStartInfo = {
+    const o: IPsStartInfo = {
         ...execOptions,
-        file: shell
-    }
+        file: shell,
+    };
 
     const sh = new Sh(o);
     sh.file(file);
@@ -439,11 +439,11 @@ export function exec() : Ps  {
     return sh;
 }
 
-export function execSync(shell: string, file: string, execOptions?: IExecOptions & { args?: string[] }) : IPsOutput
-export function execSync(file: string, execOptions?: IExecOptions & { args?: string[] }) : IPsOutput
+export function execSync(shell: string, file: string, execOptions?: IExecOptions & { args?: string[] }): IPsOutput;
+export function execSync(file: string, execOptions?: IExecOptions & { args?: string[] }): IPsOutput;
 export function execSync() {
     const args = Array.from(arguments);
-    let shell = "notset"
+    let shell = "notset";
     let file = "";
     let execOptions: IExecOptions & { args?: string[] } | undefined = undefined;
     const arg0 = args[0];
@@ -493,10 +493,10 @@ export function execSync() {
         }
     }
 
-    const o : IPsStartInfo = {
+    const o: IPsStartInfo = {
         ...execOptions,
-        file: shell
-    }
+        file: shell,
+    };
 
     const sh = new Sh(o);
     sh.file(file);
@@ -507,9 +507,9 @@ export function execSync() {
 export function sh(scripts: TemplateStringsArray, ...values: string[]) {
     const shell = getDefaultShell();
 
-    const o : IPsStartInfo = {
-        file: shell
-    }
+    const o: IPsStartInfo = {
+        file: shell,
+    };
 
     let script = "";
     for (let i = 0; i < scripts.length; i++) {
@@ -524,47 +524,47 @@ export function sh(scripts: TemplateStringsArray, ...values: string[]) {
     return sh;
 }
 
-sh.shell = function(shell?: string) {
+sh.shell = function (shell?: string) {
     if (shell) {
         setDefaultShell(shell);
     }
 
     return getDefaultShell();
-}
+};
 
-export function pwsh(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function pwsh(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("pwsh", script, execOptions);
 }
 
-export function powershell(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function powershell(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("powershell", script, execOptions);
 }
 
-export function deno(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function deno(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("deno", script, execOptions);
 }
 
-export function node(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function node(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("node", script, execOptions);
 }
 
-export function python(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function python(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("python", script, execOptions);
 }
 
-export function ruby(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function ruby(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("ruby", script, execOptions);
 }
 
-export function perl(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function perl(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("perl", script, execOptions);
 }
 
-export function dotnet(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function dotnet(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("dotnet", script, execOptions);
 }
 
-export function bash(script: string, execOptions?: IExecOptions & { args?: string[] }) : Sh {
+export function bash(script: string, execOptions?: IExecOptions & { args?: string[] }): Sh {
     return run("bash", script, execOptions);
 }
 
@@ -583,6 +583,6 @@ sh.dotnet = dotnet;
 sh.bash = bash;
 sh.sh = function (script: string, execOptions?: IExecOptions & { args?: string[] }) {
     return run("sh", script, execOptions);
-}
+};
 
 export const $ = sh;

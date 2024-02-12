@@ -158,7 +158,6 @@ export function printError(e: Error, format?: (e: Error) => string): void {
  * @returns {(target: any, _propertyKey: string, descriptor: PropertyDescriptor) => PropertyDescriptor}}
  */
 export function hideStack() {
-    
     return function (
         // deno-lint-ignore no-explicit-any
         target: any,
@@ -191,7 +190,7 @@ export function hideStack() {
 
 export class ResultError extends SystemError {
     override name = "ResultError";
-    
+
     constructor(message?: string, innerError?: Error) {
         super(message || "Result is an error.", innerError);
         this.name = "ResultError";
@@ -200,7 +199,7 @@ export class ResultError extends SystemError {
 
 export class OptionError extends SystemError {
     override name = "OptionError";
-    
+
     constructor(message?: string, innerError?: Error) {
         super(message || "Option is none.", innerError);
         this.name = "OptionError";

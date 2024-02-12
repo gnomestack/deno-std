@@ -2,7 +2,7 @@ import { assert, test } from "../testing/mod.ts";
 import { isEnvEnabled, isRunEnabled } from "../testing/deno_permissions.ts";
 import { get } from "../os/env.ts";
 import { HOME_VAR_NAME } from "../os/constants.ts";
-import { ps, run, runSync, quietRun, quietRunSync, whichSync } from "./mod.ts";
+import { ps, quietRun, quietRunSync, run, runSync, whichSync } from "./mod.ts";
 
 const hasRun = await isRunEnabled();
 const hasEnv = await isEnvEnabled();
@@ -38,7 +38,7 @@ test.when(hasGit, "execSync: failure", () => {
 });
 
 test.when(hasGit, "capture: success", async () => {
-    const { code, stdoutText , stdout, args} = await quietRun("git", "--version");
+    const { code, stdoutText, stdout, args } = await quietRun("git", "--version");
     assert.equals(code, 0);
     console.log(args);
     console.log("stdout", stdoutText);
@@ -50,8 +50,8 @@ test.when(hasGit, "capture: success", async () => {
 test.when(hasGit, "capture: failure", async () => {
     const { code, stderrText, stdoutText } = await quietRun("git", "not-a-command");
     assert.equals(code, 1);
-    console.log("out", stdoutText)
-    console.log("err", stderrText)
+    console.log("out", stdoutText);
+    console.log("err", stderrText);
     assert.stringIncludes(
         stderrText,
         "git: 'not-a-command' is not a git command. See 'git --help'.",
@@ -104,8 +104,8 @@ test.when(
         const home = get(HOME_VAR_NAME);
         const { code, stderrText } = await ps("git", ["status", "-s"])
             .cwd(home ?? "/home/")
-            .stdout('piped')
-            .stderr('piped');
+            .stdout("piped")
+            .stderr("piped");
         assert.equals(code, 128);
         assert.stringIncludes(
             stderrText,
@@ -140,7 +140,7 @@ test.when(hasEcho, "ps: text()", async () => {
 });
 
 test.when(hasEcho, "ps: lines()", async () => {
-    const lines : string[] = [];
+    const lines: string[] = [];
     for await (const line of ps("echo", "my test").lines()) {
         console.log(line);
         lines.push(line);
@@ -151,11 +151,10 @@ test.when(hasEcho, "ps: lines()", async () => {
 test.when(hasEcho, "ps: blob()", async () => {
     const blob = await ps("echo", "my test").blob();
     assert.instanceOf(blob, Blob);
-    const text =await blob.text();
+    const text = await blob.text();
     console.log(text);
     assert.equals(text, "my test\n");
 });
-
 
 test.when(hasGit, "outputSync: success with capture pipe", () => {
     const { code, stdoutText } = quietRunSync("git", ["--version"]);
@@ -164,7 +163,7 @@ test.when(hasGit, "outputSync: success with capture pipe", () => {
 });
 
 test.when(hasCat, "ps: cat using input", async () => {
-    const result = await ps("cat", [], { input: "my test", 'stdout': 'piped' });
+    const result = await ps("cat", [], { input: "my test", "stdout": "piped" });
     assert.equals(result.code, 0);
     console.log(result.stdoutText);
     assert.equals(result.stdoutText, "my test");
@@ -184,7 +183,7 @@ test.when(hasEcho, "splat arguments with extra arguments (array)", async () => {
 
 test.when(hasEcho, "splat arguments with ordered arguments", async () => {
     const result = await quietRun("echo", { text: "hello" }, {
-        splat: { arguments: ['text'] }
+        splat: { arguments: ["text"] },
     });
     assert.equals(result.code, 0);
     assert.equals(result.stdoutText, "hello\n");
@@ -192,7 +191,7 @@ test.when(hasEcho, "splat arguments with ordered arguments", async () => {
 
 test.when(hasEcho, "splat arguments with parameters", async () => {
     // converts version to --version
-    const result2 = await quietRun("git", { 'version': true });
+    const result2 = await quietRun("git", { "version": true });
     assert.equals(result2.code, 0);
     assert.stringIncludes(result2.stdoutText, "git version");
 });

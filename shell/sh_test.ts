@@ -1,5 +1,5 @@
 import { which } from "../ps/which.ts";
-import { test, assert, isRunEnabled } from "../testing/mod.ts";
+import { assert, isRunEnabled, test } from "../testing/mod.ts";
 import { run } from "./sh.ts";
 
 const hasRun = await isRunEnabled();
@@ -21,7 +21,6 @@ test.when(hasPowerShell || hasBash, "run: default", async () => {
     assert.equals(output, "hello world\n");
 });
 
-
 test.when(hasBash, "run: bash", async () => {
     const output = await run("bash", "echo 'hello world'").text();
     assert.equals(output, "hello world\n");
@@ -32,37 +31,37 @@ test.when(hasSh, "run: sh", async () => {
     assert.equals(output, "hello world\n");
 });
 
-test.when(hasPwsh, "run: pwsh", async() => {
+test.when(hasPwsh, "run: pwsh", async () => {
     const output = await run("pwsh", `Write-Host 'hello world'`).text();
     assert.equals(output, "hello world\n");
 });
 
-test.when(hasPowerShell, "run: powershell", async() => {
+test.when(hasPowerShell, "run: powershell", async () => {
     const output = await run("powershell", `Write-Host 'hello world'`).text();
     assert.equals(output, "hello world\n");
 });
 
-test.when(hasCmd, "run: cmd", async() => {
+test.when(hasCmd, "run: cmd", async () => {
     const output = await run("cmd", `echo hello world`).text();
     assert.equals(output, "hello world\r\n");
 });
 
-test.when(hasNode, "run: node", async() => {
+test.when(hasNode, "run: node", async () => {
     const output = await run("node", `console.log('hello world')`).text();
     assert.equals(output, "hello world\n");
 });
 
-test.when(hasDeno, "run: deno", async() => {
+test.when(hasDeno, "run: deno", async () => {
     const output = await run("deno", `console.log('hello world')`).text();
     assert.equals(output, "hello world\n");
 });
 
-test.when(hasRuby, "run: ruby", async() => {
+test.when(hasRuby, "run: ruby", async () => {
     const output = await run("ruby", `-e "puts 'hello world'"`).text();
     assert.equals(output, "hello world\n");
 });
 
-test.when(hasPython, "run: python", async() => {
+test.when(hasPython, "run: python", async () => {
     const output = await run("python", `-c "print('hello world')"`).text();
     assert.equals(output, "hello world\n");
 });

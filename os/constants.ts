@@ -45,7 +45,7 @@ export const osType: OsFamily = (() => {
     return "linux";
 })();
 
-Deno.build.os 
+Deno.build.os;
 let osRelease: string | undefined;
 try {
     osRelease = Deno.osRelease();
