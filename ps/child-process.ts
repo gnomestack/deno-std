@@ -82,6 +82,7 @@ export class ChildProcess implements IChildProcess {
         return tryReadLines(reader, setup, async () => {
             await reader.closed;
             reader.releaseLock();
+            await this.process.status;
         });
     }
 
@@ -109,7 +110,7 @@ export class ChildProcess implements IChildProcess {
             await this.process.stderr.cancel();
         }
 
-        const _ = this.process.status;
+        const _ = await this.process.status;
         return json;
     }
 
@@ -137,7 +138,7 @@ export class ChildProcess implements IChildProcess {
             await this.process.stderr.cancel();
         }
 
-        const _ = this.process.status;
+        const _ = await this.process.status;
         return blob;
     }
 
@@ -165,7 +166,7 @@ export class ChildProcess implements IChildProcess {
             await this.process.stderr.cancel();
         }
 
-        const _ = this.process.status;
+        const _ = await this.process.status;
         return buffer;
     }
 
@@ -193,7 +194,7 @@ export class ChildProcess implements IChildProcess {
             await this.process.stderr.cancel();
         }
 
-        const _ = this.process.status;
+        const _ = await this.process.status;
         return text;
     }
 

@@ -4,13 +4,9 @@ import { resolve } from "../path/mod.ts";
 import { cwd } from "../ps/mod.ts";
 import { IPathFinderOptions, findExe, findExeSync, registerExe } from "../ps/registry.ts";
 
-export function generateScriptFileSync(script: string, ext: string, tpl?: string) {
+export function generateScriptFileSync(script: string, ext: string) {
     const scriptFile = makeTempFileSync({ prefix: "quasar_scripts", suffix: ext });
-    if (tpl) {
-        writeTextFileSync(scriptFile, tpl.replace("{{script}}", script));
-    } else {
-        writeTextFileSync(scriptFile, script);
-    }
+    writeTextFileSync(scriptFile, script);
 
     if (!IS_WINDOWS) {
         chmodSync(scriptFile, 0o777);
@@ -37,6 +33,8 @@ export async function generateScriptFile(script: string, ext: string, tpl?: stri
 export interface IShellOptions extends IPathFinderOptions {
     args?: string[];
     ext: string;
+    requiresFile?: boolean;
+    wrap?: (script: string) => string;
     generateScriptFile?: (script: string, ext: string, tpl?: string) => Promise<string>;
     generateScriptFileSync?: (script: string, ext: string, tpl?: string) => string;
     mapPath?: (path: string) => Promise<string>;
@@ -45,7 +43,7 @@ export interface IShellOptions extends IPathFinderOptions {
 
 const registery: Record<string, IShellOptions | undefined> = {};
 
-export function register(shell: string, options: Omit<IShellOptions, "name">) {
+export function registerShell(shell: string, options: Omit<IShellOptions, "name">) {
     const opts = registerExe(shell, options);
     const o = {
         ...options,
@@ -62,25 +60,19 @@ export function list(): string[] {
     return Object.keys(registery);
 }
 
-register("cmd", {
+registerShell("cmd", {
     ext: ".cmd",
     args: ["/D", "/E:ON", "/V:OFF", "/S", "/C", "CALL"],
     windows: [
         "%SystemRoot%/System32/cmd.exe",
     ],
-    generateScriptFile: async (script: string, ext: string, tpl?: string) => {
-        script = `@echo off
-${script}`;
-        return await generateScriptFile(script, ext, tpl);
-    },
-    generateScriptFileSync: (script: string, ext: string, tpl?: string) => {
-        script = `@echo off
-${script}`;
-        return generateScriptFileSync(script, ext, tpl);
+    wrap: (script: string) => {
+        return `@echo off
+${script}`;  
     },
 });
 
-register("bash", {
+registerShell("bash", {
     ext: ".sh",
     args: ["-noprofile", "--norc", "-e", "-o", "pipefail", "-c"],
     windows: [
@@ -117,9 +109,10 @@ register("bash", {
     },
 });
 
-register("sh", {
+registerShell("sh", {
     args: ["-e"],
     ext: ".sh",
+    requiresFile: true,
     windows: [
         "%ProgramFiles%\\Git\\usr\\bin\\sh.exe",
         "%ChocolateyInstall%\\msys2\\usr\\bin\\sh.exe",
@@ -128,9 +121,10 @@ register("sh", {
     ],
 });
 
-register("deno", {
+registerShell("deno", {
     args: ["run", "-A", "--unstable"],
     ext: ".ts",
+    requiresFile: true,
     windows: [
         "%UserProfile%\\.deno\\bin\\deno.exe",
         "%ChocolateyInstall%\\lib\\deno\\tools\\deno.exe",
@@ -140,9 +134,10 @@ register("deno", {
     ],
 });
 
-register("node", {
+registerShell("node", {
     args: [],
     ext: ".js",
+    requiresFile: true,
     windows: [
         "%ProgramFiles%/nodejs/node.exe",
         "%ProgramFiles(x86)%/nodejs/node.exe",
@@ -152,34 +147,40 @@ register("node", {
     ],
 });
 
-register("python", {
+registerShell("python", {
     args: [],
     ext: ".py",
+    requiresFile: true,
     linux: [
         "/usr/bin/python3",
         "/usr/bin/python",
     ],
 });
 
-register("ruby", {
+
+
+registerShell("ruby", {
     args: [],
     ext: ".rb",
+    requiresFile: true,
     linux: [
         "/usr/bin/ruby",
     ],
 });
 
-register("perl", {
+registerShell("perl", {
     args: [],
     ext: ".pl",
+    requiresFile: true,
     linux: [
         "/usr/bin/perl",
     ],
 });
 
-register("dotnet-script", {
+registerShell("dotnet-script", {
     args: [],
     ext: ".csx",
+    requiresFile: true,
     linux: [
         "${HOME}/.dotnet/tools/dotnet-script",
     ],
@@ -188,7 +189,7 @@ register("dotnet-script", {
     ],
 });
 
-register("powershell", {
+registerShell("powershell", {
     ext: ".ps1",
     args: ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Unrestricted", "-Command"],
     windows: [
@@ -196,25 +197,15 @@ register("powershell", {
     ],
     mapPath: (path: string) => Promise.resolve(`. ${path}`),
     mapPathSync: (path: string) => `. ${path}`,
-    generateScriptFile: async (script: string, ext: string, tpl?: string) => {
-        script = `
-$ErrorActionPreference = 'Stop'
-${script}
-if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }
-        `;
-        return await generateScriptFile(script, ext, tpl);
-    },
-    generateScriptFileSync: (script: string, ext: string, tpl?: string) => {
-        script = `
-$ErrorActionPreference = 'Stop'
-${script}
-if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }
-        `;
-        return generateScriptFileSync(script, ext, tpl);
-    },
+    wrap: (script: string) => {
+        return `$ErrorActionPreference = 'Stop'
+        ${script}
+        if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }
+`;
+    }
 });
 
-register("pwsh", {
+registerShell("pwsh", {
     ext: ".ps1",
     args: ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Unrestricted", "-Command"],
     windows: [
@@ -227,21 +218,11 @@ register("pwsh", {
         "/opt/microsoft/powershell/7/pwsh",
         "/opt/microsoft/powershell/6/pwsh",
     ],
-    generateScriptFile: async (script: string, ext: string, tpl?: string) => {
-        script = `
-$ErrorActionPreference = 'Stop'
-${script}
-if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }
-        `;
-        return await generateScriptFile(script, ext, tpl);
-    },
-    generateScriptFileSync: (script: string, ext: string, tpl?: string) => {
-        script = `
-$ErrorActionPreference = 'Stop'
-${script}
-if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }
-        `;
-        return generateScriptFileSync(script, ext, tpl);
+    wrap: (script: string) => {
+        return `$ErrorActionPreference = 'Stop'
+        ${script}
+        if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }
+`;
     },
     mapPath: (path: string) => Promise.resolve(`. ${resolve(cwd(), path)}`),
     mapPathSync: (path: string) => `. ${resolve(cwd(), path)}`,

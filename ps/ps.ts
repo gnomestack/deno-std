@@ -45,6 +45,10 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
         }
     }
 
+    protected get startInfo() {
+        return this.#startInfo;
+    }
+
     /**
      * Thenable method that allows the Ps object to be used as a promise which calls the `output` method.
      * It is not recommended to use this method directly. Instead, use the `output` method.
@@ -211,6 +215,7 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `text()`.
      * 
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @returns the standard output stream as a string.
      */
     text() {
@@ -229,7 +234,8 @@ export class Ps implements IPsCommand , PromiseLike<IPsOutput> {
      * 
      * @description
      * This is a convenience method to handle passing in stdout to `Response` and calling `json()`.
-     * 
+     *
+     * @throws NotFoundOnPathError - thrown if the executable is not found on the path.
      * @returns json as `any`.
      */
     json() {
