@@ -3,6 +3,7 @@ import {
     IDirectoryInfo,
     IFileInfo,
     IMakeTempOptions,
+    IReadOptions,
     IRemoveOptions,
     ISymlinkOptions,
     IWriteOptions,
@@ -11,10 +12,10 @@ import {
 export {
     copy,
     copySync,
-    emptyDirectory,
-    emptyDirectorySync,
-    ensureDirectory,
-    ensureDirectorySync,
+    emptyDir,
+    emptyDirSync,
+    ensureDir,
+    ensureDirSync,
     ensureFile,
     ensureFileSync,
     ensureLink,
@@ -215,12 +216,12 @@ export function readTextFileSync(path: string | URL): string {
     return Deno.readTextFileSync(path);
 }
 
-export function readTextFile(path: string | URL): Promise<string> {
-    return Deno.readTextFile(path);
+export function readTextFile(path: string | URL, options?: IReadOptions): Promise<string> {
+    return Deno.readTextFile(path, options);
 }
 
-export function readFile(path: string | URL): Promise<Uint8Array> {
-    return Deno.readFile(path);
+export function readFile(path: string | URL, options?: IReadOptions): Promise<Uint8Array> {
+    return Deno.readFile(path, options);
 }
 
 export function readFileSync(path: string | URL): Uint8Array {

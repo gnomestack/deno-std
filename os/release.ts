@@ -1,4 +1,4 @@
-import { trim } from "../mod.ts";
+import { trim } from "../primitives/str.ts";
 import { IS_BROWSER } from "../runtime/mod.ts";
 import { IS_DARWIN, IS_LINUX, IS_WINDOWS, OS_FAMILY, OS_RELEASE_VERISON } from "./constants.ts";
 import { rtlGetVersion, WindowsProductType } from "./win/rtl-get-version.ts";
@@ -30,6 +30,22 @@ class OsRelease {
 
     get isWindowsServer() {
         return this.isWindows && this.variantId === "server";
+    }
+
+    get isAlpine() {
+        return this.id === "alpine";
+    }
+
+    get isArch() {
+        return this.id === "arch";
+    }
+
+    get isAmazonLinux() {
+        return this.id === "amzn" && this.versionId === "1";
+    }
+
+    get isAmazonLinux2() {
+        return this.id === "amzn" && this.versionId === "2";
     }
 
     get isUbuntu() {

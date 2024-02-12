@@ -15,13 +15,46 @@ export interface IPathFinderOptions {
     darwin?: string[];
 }
 
-const registry = new Map<string, IPathFinderOptions>();
+export class Registery2 {
+    #map: Map<string, IPathFinderOptions>;
+
+    constructor() {
+        this.#map = new Map<string, IPathFinderOptions>();
+    }
+
+    static self: Registery2;
+
+    static def() {
+        Registery2.self ??= new Registery2();
+        return Registery2.self;
+    }
+
+    public get(name: string) {
+        return this.#map.get(name);
+    }
+
+    public set(name: string, options: IPathFinderOptions) {
+        this.#map.set(name, options);
+    }
+
+    public has(name: string) {
+        return this.#map.has(name);
+    }
+}
 
 export function registerExe(
     name: string,
     options?: Partial<IPathFinderOptions>,
     force = false,
 ) {
+    let registry;
+    try {
+        registry = Registery2.def();
+    } catch (e) {
+        console.error(e);
+        registry = Registery2.def();
+        // throw e;
+    }
     let o = registry.get(name);
     if (o) {
         if (force && options) {
@@ -80,7 +113,7 @@ export function findExeSync(name: string | URL) {
     if (isAbsolute(name) && isFileSync(name)) {
         return name;
     }
-
+    const registry = Registery2.def();
     let options = registry.get(name);
     if (!options) {
         options ??= {} as IPathFinderOptions;
@@ -156,6 +189,7 @@ export function findExeSync(name: string | URL) {
 }
 
 export function getEntry(name: string) {
+    const registry = Registery2.def();
     let options = registry.get(name);
     if (!options) {
         options ??= {} as IPathFinderOptions;
@@ -172,7 +206,7 @@ export function getEntry(name: string) {
 }
 
 export function hasEntry(name: string) {
-    return registry.has(name);
+    return Registery2.def().has(name);
 }
 
 export async function findExe(name: string | URL) {
@@ -188,6 +222,7 @@ export async function findExe(name: string | URL) {
         return name;
     }
 
+    const registry = Registery2.def();
     let options = registry.get(name);
     if (!options) {
         options ??= {} as IPathFinderOptions;

@@ -59,6 +59,15 @@ export interface IWriteOptions {
     mode?: number;
 }
 
+export interface IReadOptions {
+    /**
+     * An abort signal to allow cancellation of the file read operation.
+     * If the signal becomes aborted the readFile operation will be stopped
+     * and the promise returned will be rejected with an AbortError.
+     */
+    signal?: AbortSignal;
+}
+
 export interface IFileInfo {
     name: string;
     deviceId: number | null;

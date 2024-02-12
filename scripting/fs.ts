@@ -7,8 +7,8 @@ import {
     IRemoveOptions,
     ISymlinkOptions,
     IWriteOptions,
-} from "./_interfaces.ts";
-import * as fs2 from "./fs.ts";
+} from "../fs/_interfaces.ts";
+import * as fs2 from "../fs/fs.ts";
 
 export interface IFileSystem {
     chmod(path: string | URL, mode: number): Promise<void>;

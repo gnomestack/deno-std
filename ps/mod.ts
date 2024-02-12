@@ -1,6 +1,6 @@
 import { NotFoundOnPathError } from "../errors/mod.ts";
-import { postCallHooks, preCallHooks, Ps, ps } from "./ps.ts";
 import { findExe, findExeSync, registerExe } from "./registry.ts";
+import { postCallHooks, preCallHooks, Ps, ps } from "./ps.ts";
 import { normalizeExecArgs, splat, splitArguments } from "./utils.ts";
 import {
     ExecArgs,

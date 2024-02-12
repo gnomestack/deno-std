@@ -1,8 +1,8 @@
+import { findExe, findExeSync, IPathFinderOptions, registerExe } from "../ps/registry.ts";
 import { chmod, chmodSync, makeTempFile, makeTempFileSync, writeTextFile, writeTextFileSync } from "../fs/fs.ts";
 import { IS_WINDOWS } from "../os/mod.ts";
 import { resolve } from "../path/mod.ts";
-import { cwd } from "../ps/mod.ts";
-import { findExe, findExeSync, IPathFinderOptions, registerExe } from "../ps/registry.ts";
+import { cwd } from "../ps/_base.ts";
 
 export function generateScriptFileSync(script: string, ext: string) {
     const scriptFile = makeTempFileSync({ prefix: "quasar_scripts", suffix: ext });
@@ -41,7 +41,7 @@ export interface IShellOptions extends IPathFinderOptions {
     mapPathSync?: (path: string) => string;
 }
 
-const registery: Record<string, IShellOptions | undefined> = {};
+const registery2: Record<string, IShellOptions | undefined> = {};
 
 export function registerShell(shell: string, options: Omit<IShellOptions, "name">) {
     const opts = registerExe(shell, options);
@@ -49,15 +49,15 @@ export function registerShell(shell: string, options: Omit<IShellOptions, "name"
         ...options,
         ...opts,
     };
-    registery[shell] = o;
+    registery2[shell] = o;
 }
 
 export function options(shell: string): IShellOptions | undefined {
-    return registery[shell];
+    return registery2[shell];
 }
 
 export function list(): string[] {
-    return Object.keys(registery);
+    return Object.keys(registery2);
 }
 
 registerShell("cmd", {

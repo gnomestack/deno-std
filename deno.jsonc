@@ -8,6 +8,6 @@
         "lineWidth": 120
     },
     "tasks": {
-        "test": "deno test -A --unstable"
+        "test": "deno test -A --unstable --trace-ops"
     }
 }

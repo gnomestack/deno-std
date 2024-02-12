@@ -1,20 +1,19 @@
-export * from "https://deno.land/std@0.208.0/fmt/colors.ts";
-export { BufWriterSync } from "https://deno.land/std@0.208.0/io/buf_writer.ts";
-export type { Writer } from "https://deno.land/std@0.208.0/types.d.ts";
-export * from "https://deno.land/std@0.208.0/fmt/colors.ts";
-export * from "https://deno.land/std@0.208.0/fmt/printf.ts";
-export { deepMerge } from "https://deno.land/std@0.208.0/collections/deep_merge.ts";
-export { parseArgs } from "https://deno.land/std@0.208.0/cli/mod.ts";
-export * as dotenv from "https://deno.land/std@0.208.0/dotenv/mod.ts";
-export { parse as parseYaml, stringify as stringifYaml } from "https://deno.land/std@0.208.0/yaml/mod.ts";
-export * as uuidV4 from "https://deno.land/std@0.208.0/uuid/v4.ts";
+export * from "https://deno.land/std@0.215.0/fmt/colors.ts";
+export { BufWriterSync } from "https://deno.land/std@0.215.0/io/buf_writer.ts";
+export * from "https://deno.land/std@0.215.0/fmt/colors.ts";
+export * from "https://deno.land/std@0.215.0/fmt/printf.ts";
+export { deepMerge } from "https://deno.land/std@0.215.0/collections/deep_merge.ts";
+export { parseArgs } from "https://deno.land/std@0.215.0/cli/mod.ts";
+export * as dotenv from "https://deno.land/std@0.215.0/dotenv/mod.ts";
+export { parse as parseYaml, stringify as stringifYaml } from "https://deno.land/std@0.215.0/yaml/mod.ts";
+export * as uuidV4 from "https://deno.land/std@0.215.0/uuid/v4.ts";
 export {
     copy,
     copySync,
-    emptyDir as emptyDirectory,
-    emptyDirSync as emptyDirectorySync,
-    ensureDir as ensureDirectory,
-    ensureDirSync as ensureDirectorySync,
+    emptyDir,
+    emptyDirSync,
+    ensureDir,
+    ensureDirSync,
     ensureFile,
     ensureFileSync,
     ensureLink,
@@ -27,8 +26,8 @@ export {
     expandGlobSync,
     move,
     moveSync,
-} from "https://deno.land/std@0.208.0/fs/mod.ts";
-export type { ExpandGlobOptions, WalkEntry } from "https://deno.land/std@0.208.0/fs/mod.ts";
+} from "https://deno.land/std@0.215.0/fs/mod.ts";
+export type { ExpandGlobOptions, WalkEntry } from "https://deno.land/std@0.215.0/fs/mod.ts";
 export {
     assert as assertTruthy,
     assertAlmostEquals,
@@ -52,4 +51,4 @@ export {
     fail,
     unimplemented,
     unreachable,
-} from "https://deno.land/std@0.208.0/assert/mod.ts";
+} from "https://deno.land/std@0.215.0/assert/mod.ts";
