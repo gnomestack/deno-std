@@ -1,7 +1,7 @@
 import { extname } from "https://deno.land/std@0.208.0/path/extname.ts";
 import { findExeSync, IExecOptions, IPsOutput, IPsStartInfo, Ps } from "../ps/mod.ts";
 import { IS_WINDOWS } from "../os/constants.ts";
-import { generateScriptFile, generateScriptFileSync, list, options } from "./sh_registry.ts";
+import { generateScriptFile, generateScriptFileSync, list, options } from "./sh-registry.ts";
 
 let defaultShell = IS_WINDOWS ? "powershell" : "bash";
 
